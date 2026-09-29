@@ -1,6 +1,7 @@
 package com.cardbattle.engine.rules;
 
 import com.cardbattle.engine.card.CardDefinition;
+import com.cardbattle.engine.card.CardInstance;
 import com.cardbattle.engine.card.CardPack;
 import com.cardbattle.engine.card.ConditionSpec;
 import com.cardbattle.engine.card.EffectSpec;
@@ -229,6 +230,23 @@ public final class TurnContext {
             events.toAll(EventType.STATUS_EXPIRED, payload("playerId", target.getPlayerId(),
                     "status", status.getStatus()));
         }
+    }
+
+    /** 팩에서 가중치대로 새 카드 한 장을 뽑는다 (드로우 규칙 7.9와 같은 방식) */
+    public CardInstance drawRandom() {
+        CardDefinition def = pack.cardForRoll(GameRng.nextInt(state, pack.totalWeight()));
+        return new CardInstance(state.newInstanceId(), def.id());
+    }
+
+    public CardInstance newCard(String cardId) {
+        return new CardInstance(state.newInstanceId(), cardId);
+    }
+
+    /** 손패가 바뀌었음을 알린다: 본인에게는 손패 내용, 모두에게는 장 수 */
+    public void handChanged(PlayerState player) {
+        events.toPlayer(player.getPlayerId(), EventType.HAND_UPDATED, payload("hand", List.copyOf(player.getHand())));
+        events.toAll(EventType.HAND_COUNT_CHANGED,
+                payload("playerId", player.getPlayerId(), "count", player.getHand().size()));
     }
 
     /** 현재 공격력과 누적 데미지를 바꾸고 이벤트를 남긴다 */

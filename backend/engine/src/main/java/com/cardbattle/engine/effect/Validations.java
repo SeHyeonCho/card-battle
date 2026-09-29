@@ -37,4 +37,21 @@ final class Validations {
     static boolean roll(TurnContext ctx, double p) {
         return ctx.random(1_000_000) < Math.round(p * 1_000_000);
     }
+
+    /** key가 있으면 팩에 있는 카드 ID 배열이어야 한다 */
+    static void requireCardIds(EffectSpec spec, String key, String path, PackCheck check, List<String> errors) {
+        Object raw = spec.raw(key);
+        if (raw == null) {
+            return;
+        }
+        if (!(raw instanceof List<?> ids)) {
+            errors.add(path + "." + key + ": 카드 ID 배열이어야 합니다");
+            return;
+        }
+        for (Object id : ids) {
+            if (check.pack().card(String.valueOf(id)) == null) {
+                errors.add(path + "." + key + ": 팩에 없는 카드 '" + id + "'");
+            }
+        }
+    }
 }

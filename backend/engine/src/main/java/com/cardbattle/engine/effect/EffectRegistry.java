@@ -47,6 +47,10 @@ public final class EffectRegistry {
                 // 공격 보정·손패
                 new ConditionalAttackEffect(),
                 new HandLimitEffect(),
+                new ReplaceHandEffect(),
+                new SwapHandEffect(),
+                new GiveCardsEffect(),
+                new RetrieveFromFieldEffect(),
                 // 저주·지속 상태
                 new ApplyCurseEffect(),
                 new RemoveCurseEffect(),
