@@ -30,6 +30,16 @@ public class GameState {
     private List<FieldCard> field = new ArrayList<>();
     /** 필드 카드가 건 제출 제한 (PRD 7.7) */
     private List<FieldLock> fieldLocks = new ArrayList<>();
+    /** 다음 턴 전환 때 건너뛸 차례 수 (점프) */
+    private int pendingSkips;
+    /** 다음 차례가 오면 아무것도 못 하고 넘어가는 플레이어 (시간아 멈춰라!) */
+    private String lockedPlayerId;
+    /** 다음 차례를 강제로 맡을 플레이어 (교차로) */
+    private String forcedNextPlayerId;
+    /** 설치된 랜덤시한폭탄. 없으면 null */
+    private TimeBomb timeBomb;
+    /** 무승부까지 남은 턴 수 (카페베네). 없으면 null */
+    private Integer drawCountdown;
     /** 상태 버전. 행동이 하나 처리될 때마다 1씩 오른다 (낙관적 동시성 제어) */
     private long version;
     /** 다음 이벤트 일련번호 */
@@ -217,5 +227,45 @@ public class GameState {
 
     public void setFieldLocks(List<FieldLock> fieldLocks) {
         this.fieldLocks = fieldLocks == null ? new ArrayList<>() : new ArrayList<>(fieldLocks);
+    }
+
+    public int getPendingSkips() {
+        return pendingSkips;
+    }
+
+    public void setPendingSkips(int pendingSkips) {
+        this.pendingSkips = pendingSkips;
+    }
+
+    public String getLockedPlayerId() {
+        return lockedPlayerId;
+    }
+
+    public void setLockedPlayerId(String lockedPlayerId) {
+        this.lockedPlayerId = lockedPlayerId;
+    }
+
+    public String getForcedNextPlayerId() {
+        return forcedNextPlayerId;
+    }
+
+    public void setForcedNextPlayerId(String forcedNextPlayerId) {
+        this.forcedNextPlayerId = forcedNextPlayerId;
+    }
+
+    public TimeBomb getTimeBomb() {
+        return timeBomb;
+    }
+
+    public void setTimeBomb(TimeBomb timeBomb) {
+        this.timeBomb = timeBomb;
+    }
+
+    public Integer getDrawCountdown() {
+        return drawCountdown;
+    }
+
+    public void setDrawCountdown(Integer drawCountdown) {
+        this.drawCountdown = drawCountdown;
     }
 }

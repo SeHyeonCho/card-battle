@@ -14,6 +14,7 @@ import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.GameStatus;
 import com.cardbattle.engine.state.PlayerState;
 import com.cardbattle.engine.state.StatusState;
+import com.cardbattle.engine.state.TimeBomb;
 import com.cardbattle.engine.view.CardPlayabilityView;
 
 import java.time.Clock;
@@ -125,7 +126,8 @@ public final class TurnResolver {
             }
         }
 
-        // 5. 확률 효과(시한폭탄) — Phase 2-4, 항상 이 위치(맨 마지막)에서 판정
+        // 5. 확률 효과(시한폭탄): 항상 이 위치(효과 중 맨 마지막)에서 판정
+        explodeTimeBomb(ctx);
 
         // 6. 체력 상한 보정 (저주로 줄어든 상한 포함)
         for (PlayerState p : state.getPlayers()) {
@@ -157,15 +159,76 @@ public final class TurnResolver {
             }
         }
 
-        // 9. 필드 정리 — Phase 2 (필드 락 만료)
+        // 9. 필드 정리: 기한이 지난 필드 락 해제 (최대 2턴, PRD 7.7)
+        int turn = state.getTurnNumber();
+        if (state.getFieldLocks().removeIf(l -> turn >= l.getExpiresAfterTurn())) {
+            events.toAll(EventType.FIELD_LOCKS_CHANGED, payload("locks", List.copyOf(state.getFieldLocks())));
+        }
 
         events.toAll(EventType.TURN_ENDED, payload("playerId", actor.getPlayerId(), "turnNumber", state.getTurnNumber()));
 
-        if (!finishIfOver(state, events)) {
-            PlayerState next = TargetResolver.nextAlive(state, state.getCurrentSeat(), state.getDirection());
-            state.setCurrentSeat(next.getSeat());
-            startTurn(state, events);
+        if (finishIfOver(state, events) || finishByCountdown(state, events)) {
+            return;
         }
+        PlayerState next = nextPlayer(state, events);
+        state.setCurrentSeat(next.getSeat());
+        startTurn(state, events);
+    }
+
+    /** 교차로(강제 지정) → 방향대로 다음 생존자 → 점프 횟수만큼 건너뛰기 */
+    private static PlayerState nextPlayer(GameState state, EventSink events) {
+        PlayerState forced = state.getForcedNextPlayerId() == null ? null : state.player(state.getForcedNextPlayerId());
+        state.setForcedNextPlayerId(null);
+        PlayerState next = forced != null && forced.alive() ? forced
+                : TargetResolver.nextAlive(state, state.getCurrentSeat(), state.getDirection());
+        while (state.getPendingSkips() > 0) {
+            state.setPendingSkips(state.getPendingSkips() - 1);
+            events.toAll(EventType.TURN_SKIPPED, payload("playerId", next.getPlayerId()));
+            PlayerState after = TargetResolver.nextAlive(state, next.getSeat(), state.getDirection());
+            next = after == null ? next : after;
+        }
+        return next;
+    }
+
+    private void explodeTimeBomb(TurnContext ctx) {
+        GameState state = ctx.state();
+        TimeBomb bomb = state.getTimeBomb();
+        PlayerState actor = ctx.actor();
+        if (bomb == null || !actor.alive()) {
+            return;
+        }
+        double p = bomb.getP();
+        if (ctx.card() != null) {
+            for (String tag : ctx.card().tags()) {
+                p = Math.max(p, bomb.getPByTag().getOrDefault(tag, p));
+            }
+        }
+        if (ctx.random(1_000_000) < Math.round(p * 1_000_000)) {
+            state.setTimeBomb(null);
+            ctx.events().toAll(EventType.TIME_BOMB_EXPLODED, payload(
+                    "playerId", actor.getPlayerId(), "damage", bomb.getDamage()));
+            ctx.damage(actor, bomb.getDamage(), "TIME_BOMB");
+        }
+    }
+
+    /** 카페베네: 턴이 끝날 때마다 1씩 줄고 0이 되면 무승부 (PRD 7.10) */
+    private boolean finishByCountdown(GameState state, EventSink events) {
+        Integer left = state.getDrawCountdown();
+        if (left == null) {
+            return false;
+        }
+        state.setDrawCountdown(left - 1);
+        events.toAll(EventType.DRAW_COUNTDOWN_CHANGED, payload("turnsLeft", left - 1));
+        if (left - 1 > 0) {
+            return false;
+        }
+        state.setStatus(GameStatus.FINISHED);
+        state.setWinnerIds(List.of());
+        state.setTurnDeadlineEpochMs(0);
+        state.setDrawCountdown(null);
+        events.toAll(EventType.GAME_ENDED, payload(
+                "winnerIds", List.of(), "draw", true, "reason", "DRAW_COUNTDOWN", "ranking", ranking(state)));
+        return true;
     }
 
     /** @return 이번에 탈락한 플레이어 ID */
@@ -256,6 +319,15 @@ public final class TurnResolver {
                 "deadlineEpochMs", state.getTurnDeadlineEpochMs()));
         events.toPlayer(current.getPlayerId(), EventType.PLAYABILITY_UPDATED,
                 payload("cards", playabilityOf(state, current)));
+
+        // 시간아 멈춰라!: 이 사람은 아무것도 못 하고, 카드 없이 곧바로 정산된다 (남은 누적을 받는다)
+        if (current.getPlayerId().equals(state.getLockedPlayerId())) {
+            state.setLockedPlayerId(null);
+            events.toAll(EventType.TURN_LOCKED, payload("playerId", current.getPlayerId()));
+            TurnContext ctx = new TurnContext(state, pack, current, null, 0, null, events);
+            judge(ctx);
+            settle(ctx);
+        }
     }
 
     /** 7.9 드로우: 손패 한도까지 가중치 추첨 */

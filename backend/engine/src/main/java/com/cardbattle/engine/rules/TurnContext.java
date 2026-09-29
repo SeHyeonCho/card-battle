@@ -35,6 +35,8 @@ public final class TurnContext {
     /** 저주 효과를 실행하는 중이면 저주를 건 사람 (CASTER 대상), 아니면 null */
     private PlayerState caster;
     private boolean curseContext;
+    /** 낸 카드의 인스턴스 ID (필드 락의 출처). 버리기·저주 문맥이면 null */
+    private String cardInstanceId;
 
     private ChainOutcome outcome;
     private int restartAttack;
@@ -78,6 +80,14 @@ public final class TurnContext {
     /** 낸 카드. 버리기·시간 초과면 null */
     public CardDefinition card() {
         return card;
+    }
+
+    public String cardInstanceId() {
+        return cardInstanceId;
+    }
+
+    public void setCardInstanceId(String cardInstanceId) {
+        this.cardInstanceId = cardInstanceId;
     }
 
     public int attack() {

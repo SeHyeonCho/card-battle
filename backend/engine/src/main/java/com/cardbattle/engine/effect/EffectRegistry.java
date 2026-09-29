@@ -53,9 +53,17 @@ public final class EffectRegistry {
                 new ReflectCurseEffect(),
                 new ApplyStatusEffect(),
                 new DispelStatusesEffect(),
+                // 필드·흐름
+                new FieldLockEffect(),
+                new SkipNextEffect(),
+                new ReverseOrderEffect(),
+                new LockNextPlayerEffect(),
+                new SetNextPlayerEffect(),
+                new StartDrawCountdownEffect(),
                 // 확률
                 new ChanceEffect(),
-                new RandomChoiceEffect()));
+                new RandomChoiceEffect(),
+                new TimeBombEffect()));
     }
 
     public EffectHandler handler(String type) {

@@ -5,6 +5,7 @@ import com.cardbattle.engine.card.CardInstance;
 import com.cardbattle.engine.state.FieldCard;
 import com.cardbattle.engine.state.FieldLock;
 import com.cardbattle.engine.state.GameStatus;
+import com.cardbattle.engine.state.TimeBomb;
 
 import java.util.List;
 
@@ -25,6 +26,8 @@ public record GameSnapshot(
         int accumulatedDamage,
         List<FieldCard> field,
         List<FieldLock> fieldLocks,
+        TimeBomb timeBomb,
+        Integer drawCountdown,
         List<PlayerView> players,
         String viewerId,
         List<CardInstance> myHand,

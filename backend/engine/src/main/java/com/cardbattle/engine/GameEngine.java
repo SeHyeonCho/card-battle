@@ -160,6 +160,7 @@ public final class GameEngine {
         actor.getHand().remove(inst);
         int attack = card.attackCard() ? attackFor(state, actor, card) : 0;
         TurnContext ctx = new TurnContext(state, pack, actor, card, attack, chosen, events);
+        ctx.setCardInstanceId(inst.instanceId());
         StatusState bonus = actor.status(Statuses.NEXT_ATTACK_BONUS);
         if (card.attackCard() && bonus != null && bonus.getAppliedTurn() < state.getTurnNumber()) {
             ctx.removeStatus(actor, bonus); // 스팀팩 보너스는 공격 카드 한 장에 한 번 쓰인다
@@ -178,6 +179,10 @@ public final class GameEngine {
         state.setField(List.of(new FieldCard(inst.instanceId(), card.id(), actor.getPlayerId(), attack,
                 state.getTurnNumber())));
         events.toAll(EventType.FIELD_CHANGED, payload("field", List.copyOf(state.getField())));
+        // 필드가 바뀌면 이전 필드 카드의 락은 풀린다 (방금 낸 카드가 건 락만 남는다)
+        if (state.getFieldLocks().removeIf(l -> !l.getSourceInstanceId().equals(inst.instanceId()))) {
+            events.toAll(EventType.FIELD_LOCKS_CHANGED, payload("locks", List.copyOf(state.getFieldLocks())));
+        }
 
         resolver.settle(ctx);
         return ActionResult.accepted(events.commit());
@@ -260,6 +265,8 @@ public final class GameEngine {
                 state.getAccumulatedDamage(),
                 List.copyOf(state.getField()),
                 List.copyOf(state.getFieldLocks()),
+                state.getTimeBomb(),
+                state.getDrawCountdown(),
                 playerViews(state),
                 viewerId,
                 myHand,

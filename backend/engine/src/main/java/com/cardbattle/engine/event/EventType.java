@@ -20,6 +20,15 @@ public enum EventType {
     HAND_REVEALED,
     /** 코스모의 강화기: 카드 내기가 버리기로 바뀜 */
     PLAY_FUMBLED,
+    FIELD_LOCKS_CHANGED,
+    TURN_SKIPPED,
+    /** 시간아 멈춰라!: 이 차례는 아무것도 못 하고 누적을 받는다 */
+    TURN_LOCKED,
+    DIRECTION_CHANGED,
+    TIME_BOMB_PLANTED,
+    TIME_BOMB_EXPLODED,
+    TIME_BOMB_REMOVED,
+    DRAW_COUNTDOWN_CHANGED,
     PLAYER_ELIMINATED,
     TURN_ENDED,
     GAME_ENDED,

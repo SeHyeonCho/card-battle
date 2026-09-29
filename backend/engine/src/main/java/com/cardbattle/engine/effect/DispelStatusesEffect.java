@@ -1,8 +1,10 @@
 package com.cardbattle.engine.effect;
 
 import com.cardbattle.engine.card.EffectSpec;
+import com.cardbattle.engine.event.EventType;
 import com.cardbattle.engine.rules.Statuses;
 import com.cardbattle.engine.rules.TurnContext;
+import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
 import com.cardbattle.engine.state.StatusState;
 
@@ -11,8 +13,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static com.cardbattle.engine.event.EventSink.payload;
+
 /**
- * 지속 상태를 없앤다 (이엠피 쇼크웨이브, 폭설).
+ * 지속 상태를 없앤다 (이엠피 쇼크웨이브, 폭설). TIME_BOMB·DRAW_COUNTDOWN은 게임 전체에 걸린 것이라
+ * 대상과 관계없이 없어진다.
  * <pre>{ "type": "DISPEL_STATUSES", "target": "ALL_OTHERS", "filter": { "statuses": ["UNTARGETABLE", "REGEN"] } }</pre>
  * filter를 생략하면 대상의 지속 상태를 모두 없앤다.
  */
@@ -37,6 +42,16 @@ public final class DispelStatusesEffect implements EffectHandler {
                     ctx.removeStatus(target, st);
                 }
             }
+        }
+        // 게임 전체에 걸린 것 (대상과 무관)
+        GameState state = ctx.state();
+        if (state.getTimeBomb() != null && (names == null || names.contains(Statuses.TIME_BOMB))) {
+            state.setTimeBomb(null);
+            ctx.events().toAll(EventType.TIME_BOMB_REMOVED, payload("reason", "DISPEL"));
+        }
+        if (state.getDrawCountdown() != null && (names == null || names.contains(Statuses.DRAW_COUNTDOWN))) {
+            state.setDrawCountdown(null);
+            ctx.events().toAll(EventType.DRAW_COUNTDOWN_CHANGED, payload("turnsLeft", null));
         }
     }
 
