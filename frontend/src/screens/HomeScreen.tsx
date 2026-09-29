@@ -68,7 +68,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
     <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 p-6">
       <div className="text-center">
         <h1 className="text-4xl font-black tracking-tight">카드 배틀</h1>
-        <p className="mt-1 text-slate-400">누적 데미지를 친구에게 떠넘겨라</p>
+        <p className="mt-1 text-slate-400">누적 데미지를 상대에게 떠넘겨라</p>
       </div>
 
       <section className="space-y-2">

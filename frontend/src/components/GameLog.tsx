@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useApp } from '../store/app'
 
-/** 게임 로그 (PRD FR-UI-04). 처음 하는 친구도 방금 무슨 일이 있었는지 볼 수 있게 */
+/** 게임 로그 (PRD FR-UI-04). 처음 하는 플레이어도 방금 무슨 일이 있었는지 볼 수 있게 */
 export function GameLog() {
   const log = useApp((s) => s.log)
   const bottom = useRef<HTMLDivElement>(null)
