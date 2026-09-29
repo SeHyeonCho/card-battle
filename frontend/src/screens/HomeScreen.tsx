@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { ApiError, api } from '../api/http'
 import { useApp } from '../store/app'
 import type { PackSummary } from '../types'
@@ -19,6 +19,15 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
   const [startingHp, setStartingHp] = useState(200)
   const [turnTime, setTurnTime] = useState(25)
   const [busy, setBusy] = useState(false)
+  // 방 만들기 영역. 열면 곧바로 접근 코드 칸에 포커스를 준다.
+  // (예전 <details>는 열고 나서도 포커스가 제목 줄에 남아, 바로 타이핑하면 글자는 안 들어가고
+  //  스페이스·엔터가 제목 줄을 눌러 영역이 다시 닫혔다)
+  const [createOpen, setCreateOpen] = useState(false)
+  const accessCodeInput = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (createOpen) accessCodeInput.current?.focus()
+  }, [createOpen])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -84,11 +93,22 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
         </button>
       </section>
 
-      <details className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <summary className="cursor-pointer font-bold">방 만들기 (방장)</summary>
-        <div className="mt-3 space-y-3">
+      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 text-left font-bold"
+          aria-expanded={createOpen}
+          aria-controls="create-room"
+          onClick={() => setCreateOpen((open) => !open)}
+        >
+          <span className="text-xs text-slate-400" aria-hidden>
+            {createOpen ? '▼' : '▶'}
+          </span>
+          방 만들기 (방장)
+        </button>
+        <div id="create-room" className="mt-3 space-y-3" hidden={!createOpen}>
           <div className="flex gap-2">
-            <input className={input} type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="서버 접근 코드" />
+            <input ref={accessCodeInput} className={input} type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="서버 접근 코드" />
             <button type="button" className="shrink-0 rounded-lg bg-slate-800 px-3 text-sm hover:bg-slate-700" onClick={loadPacks} disabled={busy}>
               팩 불러오기
             </button>
@@ -140,7 +160,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
             방 만들기
           </button>
         </div>
-      </details>
+      </section>
 
       <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-slate-300">
         서버 없이 게임 화면 미리보기
