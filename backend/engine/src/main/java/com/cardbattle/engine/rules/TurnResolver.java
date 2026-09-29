@@ -338,9 +338,13 @@ public final class TurnResolver {
 
     public List<CardPlayabilityView> playabilityOf(GameState state, PlayerState player) {
         List<CardPlayabilityView> result = new ArrayList<>();
+        boolean forcedSelf = Passives.has(player, Passives.FORCE_SELF_TARGET);
         for (CardInstance inst : player.getHand()) {
-            Playability p = playability.check(state, player, pack.card(inst.cardId()), null);
-            result.add(new CardPlayabilityView(inst.instanceId(), p.playable(), p.code(), p.reason(), p.message()));
+            CardDefinition card = pack.card(inst.cardId());
+            Playability p = playability.check(state, player, card, null);
+            String forcedTarget = forcedSelf && card.targeting().requiresChoice() ? player.getPlayerId() : null;
+            result.add(new CardPlayabilityView(inst.instanceId(), p.playable(), p.code(), p.reason(), p.message(),
+                    forcedTarget));
         }
         return result;
     }

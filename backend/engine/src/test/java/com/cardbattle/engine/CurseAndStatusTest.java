@@ -12,6 +12,7 @@ import com.cardbattle.engine.result.ActionResult;
 import com.cardbattle.engine.result.PlayBlockReason;
 import com.cardbattle.engine.result.RejectCode;
 import com.cardbattle.engine.rules.Statuses;
+import com.cardbattle.engine.view.CardPlayabilityView;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -251,6 +252,38 @@ class CurseAndStatusTest {
         g.play("p2", g.give("p2", "t.shoot"), "p1");
         assertEquals(200, g.p("p1").getHp());
         assertEquals(170, g.p("p2").getHp());
+    }
+
+    @Test
+    @DisplayName("멈춰!: 제출 가능 여부에 대상이 자기 자신으로 정해져 있다고 알려 주고, 대상 없이 낼 수 있다")
+    void forceSelfTargetNeedsNoChoice() {
+        TestGame g = game("p1", "p2", "p3");
+        curse(g, "t.stop", "p2");
+        String shoot = g.give("p2", "t.shoot");
+        String plain = g.give("p2", "t.a10");
+
+        List<CardPlayabilityView> views = g.engine.snapshot(g.state, "p2").playability();
+        assertEquals("p2", view(views, shoot).forcedTargetId());
+        assertTrue(view(views, shoot).playable());
+        assertNull(view(views, plain).forcedTargetId(), "대상을 고르지 않는 카드는 해당 없음");
+
+        ActionResult result = g.play("p2", shoot);
+        assertTrue(result.accepted());
+        assertEquals(170, g.p("p2").getHp());
+        assertEquals("p2", g.events(EventType.CARD_PLAYED).get(1).payload().get("targetId"));
+    }
+
+    @Test
+    @DisplayName("저주가 없으면 대상을 고르는 카드도 정해진 대상이 없다")
+    void noForcedTargetWithoutCurse() {
+        TestGame g = game("p1", "p2").turn("p1");
+        String shoot = g.give("p1", "t.shoot");
+        assertNull(view(g.engine.snapshot(g.state, "p1").playability(), shoot).forcedTargetId());
+        assertEquals(RejectCode.INVALID_TARGET, g.play("p1", shoot).rejection().code());
+    }
+
+    private static CardPlayabilityView view(List<CardPlayabilityView> views, String instanceId) {
+        return views.stream().filter(v -> v.instanceId().equals(instanceId)).findFirst().orElseThrow();
     }
 
     @Test

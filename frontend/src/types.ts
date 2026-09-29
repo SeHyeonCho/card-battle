@@ -106,6 +106,8 @@ export interface CardPlayability {
   code: string | null
   reason: 'FIELD_LOCK' | 'CURSE_LOCK' | 'CONDITION_UNMET' | 'EXTRA_PLAY' | null
   message: string | null
+  /** 대상이 이미 정해져 있으면 그 플레이어 (멈춰! 저주: 자기 자신). 이때는 대상을 고르지 않고 바로 낸다 */
+  forcedTargetId?: string | null
 }
 
 export interface RankingEntry {

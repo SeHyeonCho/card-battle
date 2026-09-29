@@ -53,8 +53,10 @@ export function GameScreen() {
       setDiscardMode(false)
       return
     }
-    if (!game!.playability[instance.instanceId]?.playable) return
-    if (card.targeting !== 'NONE') {
+    const playability = game!.playability[instance.instanceId]
+    if (!playability?.playable) return
+    // 멈춰! 저주처럼 대상이 이미 정해져 있으면 고르지 않고 바로 낸다
+    if (card.targeting !== 'NONE' && !playability.forcedTargetId) {
       setTargeting({ instance, card })
       return
     }
@@ -206,6 +208,11 @@ export function GameScreen() {
                     } ${discarding ? 'ring-2 ring-rose-500 rounded-xl' : ''}`}
                   >
                     <CardFace card={card} />
+                    {myTurn && !discarding && playability?.playable && playability.forcedTargetId && (
+                      <span className="absolute inset-x-1 bottom-1 rounded bg-black/80 px-1 py-0.5 text-center text-[10px] text-fuchsia-200">
+                        대상: {playability.forcedTargetId === game.viewerId ? '나' : nickOf(playability.forcedTargetId)}
+                      </span>
+                    )}
                     {blocked && playability?.reason && (
                       <span className="absolute inset-x-1 bottom-1 rounded bg-black/80 px-1 py-0.5 text-center text-[10px] text-rose-300">
                         {REASON_TEXT[playability.reason] ?? playability.message}
