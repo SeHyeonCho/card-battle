@@ -1,0 +1,3 @@
+// 순수 Java 규칙 엔진. Spring·Redis·JSON 라이브러리에 의존하지 않는다.
+// 규칙은 서버 없이 `./gradlew :engine:test` 로 검증한다.
+description = 'Card battle rule engine (no framework dependencies)'

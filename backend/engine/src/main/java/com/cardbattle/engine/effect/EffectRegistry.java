@@ -1,0 +1,52 @@
+package com.cardbattle.engine.effect;
+
+import com.cardbattle.engine.card.EffectSpec;
+import com.cardbattle.engine.rules.TurnContext;
+
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+
+/** type 문자열 → 핸들러. 등록되지 않은 type을 쓴 카드팩은 import 단계에서 거부된다. */
+public final class EffectRegistry {
+
+    private final Map<String, EffectHandler> handlers = new LinkedHashMap<>();
+
+    public EffectRegistry(List<EffectHandler> handlers) {
+        for (EffectHandler h : handlers) {
+            if (this.handlers.putIfAbsent(h.type(), h) != null) {
+                throw new IllegalArgumentException("duplicate effect handler: " + h.type());
+            }
+        }
+    }
+
+    /** Phase 1 기본 프리미티브 세트 (PRD 8.3의 P0) */
+    public static EffectRegistry defaults() {
+        return new EffectRegistry(List.of(
+                new ModifyAccumulatedEffect(),
+                new ResetAccumulatedEffect(),
+                new TransferAccumulatedEffect(),
+                new DamageEffect(),
+                new HealEffect()));
+    }
+
+    public EffectHandler handler(String type) {
+        return handlers.get(type);
+    }
+
+    public Set<String> supportedTypes() {
+        return Collections.unmodifiableSet(handlers.keySet());
+    }
+
+    public void run(TurnContext ctx, List<EffectSpec> effects) {
+        for (EffectSpec spec : effects) {
+            EffectHandler h = handlers.get(spec.type());
+            if (h == null) {
+                throw new IllegalStateException("unsupported effect type: " + spec.type());
+            }
+            h.apply(ctx, spec);
+        }
+    }
+}

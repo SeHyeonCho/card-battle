@@ -1,0 +1,57 @@
+[
+  {
+    "id": "sample.lunch",
+    "name": "점심 맛집",
+    "category": "BENEFIT",
+    "subcategory": "HEAL",
+    "effects": [
+      { "type": "HEAL", "target": "SELF", "amount": 25 }
+    ],
+    "description": "내 체력 +25",
+    "weight": 5
+  },
+  {
+    "id": "sample.bonus",
+    "name": "성과급",
+    "category": "BENEFIT",
+    "subcategory": "HEAL",
+    "conditions": [
+      { "type": "SELF_HP_LTE", "value": 100 }
+    ],
+    "effects": [
+      { "type": "HEAL", "target": "SELF", "amount": 50 }
+    ],
+    "description": "내 체력이 100 이하일 때만 낼 수 있다. 내 체력 +50",
+    "weight": 2
+  },
+  {
+    "id": "sample.passive_aggressive",
+    "name": "뼈 있는 농담",
+    "category": "BENEFIT",
+    "subcategory": "ATTACK",
+    "targeting": "CHOSEN_OTHER",
+    "effects": [
+      { "type": "DAMAGE", "target": "CHOSEN", "amount": 20 }
+    ],
+    "description": "고른 사람의 체력 -20",
+    "weight": 3
+  },
+  {
+    "id": "sample.group_chat",
+    "name": "단톡방 폭파",
+    "category": "BENEFIT",
+    "subcategory": "ATTACK",
+    "effects": [
+      { "type": "DAMAGE", "target": "ALL_OTHERS", "amount": 10 }
+    ],
+    "description": "나를 뺀 모두의 체력 -10",
+    "weight": 2
+  },
+  {
+    "id": "sample.nothing_happened",
+    "name": "아무 일도 없었다",
+    "category": "MISC",
+    "description": "정말로 아무 일도 일어나지 않는다",
+    "weight": 3
+  }
+]

@@ -1,0 +1,39 @@
+spring:
+  application:
+    name: card-battle-server
+  threads:
+    virtual:
+      enabled: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/cardbattle
+    username: cardbattle
+    password: cardbattle
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  flyway:
+    enabled: true
+
+server:
+  port: 8080
+
+app:
+  # 방을 만들 때 필요한 서버 접근 코드. 실제 운영에서는 환경변수로 바꾼다
+  access-code: ${APP_ACCESS_CODE:change-me}
+  # 카드팩 import API 관리자 키
+  admin-key: ${APP_ADMIN_KEY:change-me-admin}
+  # WebSocket 접속을 허용할 Origin 패턴 (Vite 개발 서버, 5173이 사용 중이면 다른 포트로 뜬다)
+  allowed-origins:
+    - http://localhost:[*]
+    - http://127.0.0.1:[*]
+  session-ttl: 24h
+  packs:
+    # 서버 시작 시 자동으로 불러올 카드팩 폴더 (backend/server 기준 상대 경로)
+    # 원작 카드팩은 private 저장소 경로를 여기에 추가한다. 예) ../../../card-battle-private/packs/original
+    auto-import-dirs:
+      - ../../packs/sample
+
+logging:
+  level:
+    com.cardbattle: INFO

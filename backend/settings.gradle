@@ -1,0 +1,3 @@
+rootProject.name = 'card-battle-backend'
+
+include 'engine', 'server'

@@ -1,0 +1,20 @@
+# ── 원작 카드팩은 절대 공개 저장소에 올리지 않는다 (별도 private 저장소에서 관리) ──
+packs/private/
+packs/original/
+
+# Gradle / Java
+backend/.gradle/
+backend/**/build/
+*.class
+hs_err_pid*
+
+# IDE
+.idea/
+*.iml
+.vscode/*
+!.vscode/extensions.json
+.DS_Store
+
+# 환경 변수
+.env
+.env.*

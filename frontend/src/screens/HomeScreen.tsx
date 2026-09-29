@@ -1,0 +1,150 @@
+import { useState } from 'react'
+import { ApiError, api } from '../api/http'
+import { useApp } from '../store/app'
+import type { PackSummary } from '../types'
+
+/** 첫 화면: 닉네임 → 초대 코드로 참가 또는 방 만들기 (PRD 4.2) */
+export function HomeScreen({ initialInvite }: { initialInvite: string }) {
+  const session = useApp((s) => s.session)
+  const setSession = useApp((s) => s.setSession)
+  const enterRoom = useApp((s) => s.enterRoom)
+  const toast = useApp((s) => s.toast)
+
+  const [nickname, setNickname] = useState(session?.nickname ?? '')
+  const [invite, setInvite] = useState(initialInvite)
+  const [accessCode, setAccessCode] = useState('')
+  const [packs, setPacks] = useState<PackSummary[]>([])
+  const [packCode, setPackCode] = useState('sample')
+  const [maxPlayers, setMaxPlayers] = useState(4)
+  const [startingHp, setStartingHp] = useState(200)
+  const [turnTime, setTurnTime] = useState(25)
+  const [busy, setBusy] = useState(false)
+
+  async function run(action: () => Promise<void>) {
+    setBusy(true)
+    try {
+      await action()
+    } catch (e) {
+      if (e instanceof ApiError && e.code === 'INVALID_SESSION') {
+        setSession(null)
+      }
+      toast(e instanceof Error ? e.message : '요청에 실패했습니다')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  async function ensureSession() {
+    if (session && session.nickname === nickname.trim()) return session
+    const created = await api.createSession(nickname.trim())
+    setSession(created)
+    return created
+  }
+
+  const join = () =>
+    run(async () => {
+      const s = await ensureSession()
+      enterRoom(await api.joinRoom(s.token, invite.trim().toUpperCase()))
+    })
+
+  const loadPacks = () =>
+    run(async () => {
+      const list = await api.listPacks(accessCode)
+      setPacks(list)
+      if (list.length && !list.some((p) => p.code === packCode)) setPackCode(list[0].code)
+    })
+
+  const create = () =>
+    run(async () => {
+      const s = await ensureSession()
+      enterRoom(await api.createRoom(s.token, accessCode, { packCode, maxPlayers, startingHp, hpCap: Math.max(500, startingHp), turnTimeSeconds: turnTime }))
+    })
+
+  const nicknameOk = nickname.trim().length >= 2 && nickname.trim().length <= 12
+  const input = 'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-400'
+  const primary = 'w-full rounded-lg bg-amber-500 py-2 font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40'
+
+  return (
+    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 p-6">
+      <div className="text-center">
+        <h1 className="text-4xl font-black tracking-tight">카드 배틀</h1>
+        <p className="mt-1 text-slate-400">누적 데미지를 친구에게 떠넘겨라</p>
+      </div>
+
+      <section className="space-y-2">
+        <label className="text-sm text-slate-400">닉네임 (2~12자)</label>
+        <input className={input} value={nickname} maxLength={12} onChange={(e) => setNickname(e.target.value)} placeholder="닉네임" />
+      </section>
+
+      <section className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <h2 className="font-bold">초대 코드로 참가</h2>
+        <input className={`${input} font-mono tracking-[0.3em] uppercase`} value={invite} maxLength={6} onChange={(e) => setInvite(e.target.value)} placeholder="ABC234" />
+        <button type="button" className={primary} disabled={busy || !nicknameOk || invite.trim().length !== 6} onClick={join}>
+          참가하기
+        </button>
+      </section>
+
+      <details className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+        <summary className="cursor-pointer font-bold">방 만들기 (방장)</summary>
+        <div className="mt-3 space-y-3">
+          <div className="flex gap-2">
+            <input className={input} type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="서버 접근 코드" />
+            <button type="button" className="shrink-0 rounded-lg bg-slate-800 px-3 text-sm hover:bg-slate-700" onClick={loadPacks} disabled={busy}>
+              팩 불러오기
+            </button>
+          </div>
+          <label className="block text-sm text-slate-400">
+            카드팩
+            <select className={input} value={packCode} onChange={(e) => setPackCode(e.target.value)}>
+              {packs.length === 0 && <option value="sample">sample (기본)</option>}
+              {packs.map((p) => (
+                <option key={p.code} value={p.code}>
+                  {p.name} v{p.version} {p.visibility === 'PRIVATE' ? '🔒' : ''}
+                </option>
+              ))}
+            </select>
+          </label>
+          <div className="grid grid-cols-3 gap-2 text-sm text-slate-400">
+            <label>
+              최대 인원
+              <select className={input} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))}>
+                {[2, 3, 4, 5, 6].map((n) => (
+                  <option key={n} value={n}>
+                    {n}명
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              시작 체력
+              <select className={input} value={startingHp} onChange={(e) => setStartingHp(Number(e.target.value))}>
+                {[100, 200, 300, 500].map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              턴 시간
+              <select className={input} value={turnTime} onChange={(e) => setTurnTime(Number(e.target.value))}>
+                {[15, 25, 40].map((n) => (
+                  <option key={n} value={n}>
+                    {n}초
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <button type="button" className={primary} disabled={busy || !nicknameOk || !accessCode} onClick={create}>
+            방 만들기
+          </button>
+        </div>
+      </details>
+
+      <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-slate-300">
+        서버 없이 게임 화면 미리보기
+      </a>
+    </div>
+  )
+}

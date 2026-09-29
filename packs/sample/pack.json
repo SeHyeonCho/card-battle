@@ -1,0 +1,8 @@
+{
+  "code": "sample",
+  "name": "샘플 팩 (오리지널)",
+  "version": 1,
+  "visibility": "PUBLIC",
+  "ruleMode": "SC1",
+  "description": "엔진 동작 확인용 오리지널 카드. Phase 1 프리미티브만 사용한다."
+}

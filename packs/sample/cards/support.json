@@ -1,0 +1,69 @@
+[
+  {
+    "id": "sample.coffee",
+    "name": "커피 수혈",
+    "category": "SUPPORT",
+    "subcategory": "REDUCE",
+    "effects": [
+      { "type": "MODIFY_ACCUMULATED", "op": "SUB", "value": 30 }
+    ],
+    "description": "누적 데미지를 30 줄이고, 남은 만큼 받는다",
+    "weight": 6
+  },
+  {
+    "id": "sample.vacation",
+    "name": "연차 사용",
+    "category": "SUPPORT",
+    "subcategory": "REDUCE",
+    "effects": [
+      { "type": "RESET_ACCUMULATED" }
+    ],
+    "description": "누적 데미지를 전부 없앤다",
+    "weight": 2
+  },
+  {
+    "id": "sample.not_my_job",
+    "name": "제 담당 아닌데요",
+    "category": "SUPPORT",
+    "subcategory": "TRANSFER",
+    "effects": [
+      { "type": "TRANSFER_ACCUMULATED", "to": "NEXT", "multiplier": 1 }
+    ],
+    "description": "누적 데미지를 받지 않고 다음 차례로 그대로 넘긴다",
+    "weight": 5
+  },
+  {
+    "id": "sample.reply_all",
+    "name": "전체 답장",
+    "category": "SUPPORT",
+    "subcategory": "TRANSFER",
+    "effects": [
+      { "type": "TRANSFER_ACCUMULATED", "to": "NEXT", "multiplier": 2 }
+    ],
+    "description": "누적 데미지를 두 배로 만들어 다음 차례로 넘긴다",
+    "weight": 2
+  },
+  {
+    "id": "sample.return_to_sender",
+    "name": "반송 처리",
+    "category": "SUPPORT",
+    "subcategory": "TRANSFER",
+    "effects": [
+      { "type": "TRANSFER_ACCUMULATED", "to": "PREV", "immediate": true }
+    ],
+    "description": "누적 데미지를 이전 차례 사람에게 바로 입힌다",
+    "weight": 2
+  },
+  {
+    "id": "sample.not_my_problem",
+    "name": "내 알 바 아님",
+    "category": "SUPPORT",
+    "subcategory": "TRANSFER",
+    "targeting": "CHOSEN_OTHER",
+    "effects": [
+      { "type": "TRANSFER_ACCUMULATED", "to": "CHOSEN", "immediate": true }
+    ],
+    "description": "누적 데미지를 고른 사람에게 바로 입힌다",
+    "weight": 1
+  }
+]

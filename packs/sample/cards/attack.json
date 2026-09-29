@@ -1,0 +1,123 @@
+[
+  {
+    "id": "sample.poke",
+    "name": "쿡 찌르기",
+    "category": "ATTACK",
+    "attack": 5,
+    "description": "공격력 5",
+    "flavor": "카톡 '자니?'",
+    "weight": 10
+  },
+  {
+    "id": "sample.jab",
+    "name": "가벼운 잽",
+    "category": "ATTACK",
+    "attack": 10,
+    "description": "공격력 10",
+    "weight": 12
+  },
+  {
+    "id": "sample.alarm",
+    "name": "월요일 알람",
+    "category": "ATTACK",
+    "attack": 15,
+    "description": "공격력 15",
+    "flavor": "5분만 더...",
+    "weight": 10
+  },
+  {
+    "id": "sample.deadline",
+    "name": "마감 임박",
+    "category": "ATTACK",
+    "attack": 20,
+    "description": "공격력 20",
+    "weight": 9
+  },
+  {
+    "id": "sample.meeting",
+    "name": "회의가 길어짐",
+    "category": "ATTACK",
+    "attack": 25,
+    "description": "공격력 25",
+    "flavor": "마지막으로 하나만 더요",
+    "weight": 8
+  },
+  {
+    "id": "sample.overtime",
+    "name": "야근 확정",
+    "category": "ATTACK",
+    "attack": 30,
+    "description": "공격력 30",
+    "weight": 6
+  },
+  {
+    "id": "sample.all_nighter",
+    "name": "밤샘 코딩",
+    "category": "ATTACK",
+    "attack": 40,
+    "effects": [
+      { "type": "DAMAGE", "target": "SELF", "amount": 10 }
+    ],
+    "description": "공격력 40. 반동으로 내 체력 -10",
+    "weight": 4
+  },
+  {
+    "id": "sample.production_bug",
+    "name": "운영 서버 장애",
+    "category": "ATTACK",
+    "attack": 60,
+    "effects": [
+      { "type": "DAMAGE", "target": "SELF", "amount": 20 }
+    ],
+    "description": "공격력 60. 반동으로 내 체력 -20",
+    "flavor": "금요일 오후 6시였다",
+    "weight": 2
+  },
+  {
+    "id": "sample.gacha",
+    "name": "가챠 돌리기",
+    "category": "ATTACK",
+    "attackRange": [5, 45],
+    "description": "공격력이 5~45 사이에서 무작위로 정해진다",
+    "flavor": "이번엔 뜬다",
+    "weight": 5
+  },
+  {
+    "id": "sample.snack_break",
+    "name": "간식 타임",
+    "category": "ATTACK",
+    "attack": 10,
+    "effects": [
+      { "type": "HEAL", "target": "SELF", "amount": 10 }
+    ],
+    "description": "공격력 10. 내 체력 +10",
+    "weight": 5
+  },
+  {
+    "id": "sample.drag_along",
+    "name": "물귀신 작전",
+    "category": "ATTACK",
+    "attack": 15,
+    "effects": [
+      { "type": "MODIFY_ACCUMULATED", "timing": "ON_RECEIVE", "op": "ADD", "value": 30 }
+    ],
+    "description": "공격력 15. 이 카드를 내고 누적 데미지를 받으면, 새로 시작하는 누적 데미지 +30",
+    "flavor": "나만 죽을 순 없지",
+    "weight": 4
+  },
+  {
+    "id": "sample.last_minute",
+    "name": "퇴근 5분 전",
+    "category": "ATTACK",
+    "attack": 5,
+    "conditions": [
+      { "type": "ACCUMULATED_GTE", "value": 50 }
+    ],
+    "effects": [
+      { "type": "RESET_ACCUMULATED" }
+    ],
+    "description": "누적 데미지가 50 이상일 때만 낼 수 있다. 누적 데미지를 0으로 만든다",
+    "flavor": "오늘 일은 내일의 나에게",
+    "weight": 3
+  }
+]
