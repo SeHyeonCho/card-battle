@@ -86,7 +86,7 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 현재 상태 (Phase 2 완료)
 
-- 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 140개 통과.
+- 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 151개 통과.
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
   원작 팩이 있으면 카드별 효과음 59개를 등록해 `/api/packs/{code}/sounds` 로 제공한다.
@@ -99,10 +99,12 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   - 턴 시간 초과 → `TURN_TIMED_OUT`, 무작위 1장 버리고 차례 넘어감
   - 옛 버전 `STALE_VERSION`, 같은 actionId `DUPLICATE_ACTION`(한 번만 처리), 남의 차례 `NOT_YOUR_TURN`,
     1초 6번째 요청부터 `RATE_LIMITED`
-- 알려진 개선점: 새로고침하면 게임 로그 패널이 비어 있다 (스냅샷에 로그가 없음, FR-UI-04 P1)
+- 새로고침해도 게임 로그 유지: 스냅샷에 최근 공개 이벤트(최대 200개)를 담고, 화면이 `reduce` 로그 문구로 다시 채운다
+- 자리 비움·강퇴 (PRD 4.3): 3번 연속 시간 초과 → `PLAYER_AWAY_CHANGED`, 방장이 `/app/rooms/{roomId}/kick` 으로 강퇴
+  (게임에서 탈락 + 방에서 제외. 차례였던 사람이면 누적은 사라지고 다음 차례). 대기실 강퇴(FR-ROOM-05)는 아직 없음
+- 멈춰! 저주: 제출 가능 여부의 `forcedTargetId` 로 화면이 대상 선택 없이 바로 낸다
 
 ## 다음 작업 순서
 
 1. 원작 이미지 연결 (효과음은 연결 완료: `packs/original/assets/picks.json` → `build_sounds.py` → `assets/sounds/`)
-2. 새로고침하면 게임 로그가 비는 문제 (스냅샷에 최근 로그 포함)
-3. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)
+2. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)
