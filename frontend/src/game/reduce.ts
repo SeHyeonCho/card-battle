@@ -2,13 +2,18 @@ import type {
   CardInfo,
   CardInstance,
   CardPlayability,
+  ExtraPlayState,
   FieldCard,
+  FieldLock,
   GameSettings,
   GameSnapshot,
   PlayerView,
   RankingEntry,
   ServerMessage,
+  StatusView,
+  TimeBomb,
 } from '../types'
+import { EXTRA_MODE_TEXT, STATUS_TEXT } from './describe'
 import type { SfxName } from '../audio/sfx'
 
 /**
@@ -28,6 +33,11 @@ export interface GameView {
   currentAttack: number
   accumulatedDamage: number
   field: FieldCard[]
+  fieldLocks: FieldLock[]
+  timeBomb: TimeBomb | null
+  drawCountdown: number | null
+  /** 추가 제출 중이면 그 내용 (현재 차례인 사람의 것) */
+  extraPlay: ExtraPlayState | null
   players: PlayerView[]
   viewerId: string
   myHand: CardInstance[]
@@ -48,6 +58,16 @@ export type Fx =
   | { kind: 'toast'; text: string }
   | { kind: 'resync' }
 
+/** 체력 감소 원인별 로그 문구 (없으면 로그를 남기지 않는다) */
+const HP_CAUSE: Record<string, string> = {
+  ACCUMULATED: '누적 데미지',
+  TRANSFER: '전달된 누적 데미지',
+  REDIRECT: '대신 받은 누적 데미지',
+  TIME_BOMB: '폭탄 피해',
+  SHARE: '나눠 받은 누적 데미지',
+  BASEBALL_BAT: '야구빠따 피해',
+}
+
 export function fromSnapshot(s: GameSnapshot): GameView {
   return {
     gameId: s.gameId,
@@ -61,6 +81,10 @@ export function fromSnapshot(s: GameSnapshot): GameView {
     currentAttack: s.currentAttack,
     accumulatedDamage: s.accumulatedDamage,
     field: s.field,
+    fieldLocks: s.fieldLocks ?? [],
+    timeBomb: s.timeBomb ?? null,
+    drawCountdown: s.drawCountdown ?? null,
+    extraPlay: s.extraPlay ?? null,
     players: s.players,
     viewerId: s.viewerId,
     myHand: s.myHand,
@@ -84,6 +108,8 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
   const fx: Fx[] = []
   const nick = (id: unknown) => view.players.find((pl) => pl.playerId === id)?.nickname ?? '?'
   const cardName = (id: unknown) => view.cards[str(id)]?.name ?? '?'
+  const updatePlayer = (id: unknown, patch: (pl: PlayerView) => PlayerView) =>
+    next.players.map((pl) => (pl.playerId === id ? patch(pl) : pl))
   let next: GameView = {
     ...view,
     version: msg.version ? Math.max(view.version, msg.version) : view.version,
@@ -107,11 +133,14 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
     }
     case 'CARD_PLAYED': {
       const instanceId = str(p.instanceId)
-      // 필드를 바로 바꿔서, 내 손패의 같은 카드가 필드로 "날아가는" 애니메이션이 한 번에 일어나게 한다
+      // 필드를 바로 바꿔서, 내 손패의 같은 카드가 필드로 "날아가는" 애니메이션이 한 번에 일어나게 한다.
+      // 추가 제출·전군 돌격으로 이어서 낸 카드는 필드에 쌓는다 (최종 필드는 FIELD_CHANGED가 확정한다)
+      const played = { instanceId, cardId: str(p.cardId), ownerId: str(p.playerId), attack: num(p.attack), playedTurn: next.turnNumber }
+      const stack = next.extraPlay !== null || p.via === 'PLAY_ALL'
       next = {
         ...next,
         myHand: next.myHand.filter((c) => c.instanceId !== instanceId),
-        field: [{ instanceId, cardId: str(p.cardId), ownerId: str(p.playerId), attack: num(p.attack), playedTurn: next.turnNumber }],
+        field: stack ? [...next.field, played] : [played],
         playability: {},
       }
       const attack = typeof p.attack === 'number' ? ` (공격력 ${p.attack})` : ''
@@ -135,8 +164,9 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
       fx.push({ kind: 'floater', playerId, delta })
       if (delta < 0) {
         fx.push({ kind: 'sound', name: 'hit' }, { kind: 'shake', playerId })
-        if (p.cause === 'ACCUMULATED') {
-          fx.push({ kind: 'log', text: `${nick(playerId)} 누적 데미지 ${-delta} 받음` })
+        const reason = HP_CAUSE[str(p.cause)]
+        if (reason) {
+          fx.push({ kind: 'log', text: `${nick(playerId)} ${reason} ${-delta} 받음` })
         }
       } else {
         fx.push({ kind: 'sound', name: 'heal' })
@@ -168,9 +198,92 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
     case 'GAME_ENDED': {
       const winnerIds = (p.winnerIds as string[]) ?? []
       next = { ...next, status: 'FINISHED', winnerIds, ranking: (p.ranking as RankingEntry[]) ?? [], draw: p.draw === true, playability: {} }
-      fx.push({ kind: 'sound', name: 'win' }, { kind: 'log', text: p.draw ? '무승부!' : `🏆 ${winnerIds.map(nick).join(', ')} 승리!` })
+      const drawText = p.reason === 'DRAW_COUNTDOWN' ? '☕ 카운트다운 종료 — 무승부!' : '무승부!'
+      fx.push({ kind: 'sound', name: 'win' }, { kind: 'log', text: p.draw ? drawText : `🏆 ${winnerIds.map(nick).join(', ')} 승리!` })
       break
     }
+    case 'HAND_LIMIT_CHANGED':
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, handLimit: num(p.handLimit) })) }
+      fx.push({ kind: 'log', text: `${nick(p.playerId)} 손패 한도 ${num(p.handLimit)}장` })
+      break
+    case 'CURSE_APPLIED':
+      next = {
+        ...next,
+        players: updatePlayer(p.playerId, (pl) => ({ ...pl, curse: { cardId: str(p.cardId) || null, casterId: str(p.casterId) } })),
+      }
+      fx.push({ kind: 'log', text: `😈 ${nick(p.playerId)}에게 [${cardName(p.cardId)}] 저주` })
+      break
+    case 'CURSE_REMOVED':
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, curse: null })) }
+      fx.push({ kind: 'log', text: `✨ ${nick(p.playerId)}의 [${cardName(p.cardId)}] 저주 해제` })
+      break
+    case 'STATUS_APPLIED': {
+      const status: StatusView = { status: str(p.status), turnsLeft: num(p.turns) }
+      next = {
+        ...next,
+        players: updatePlayer(p.playerId, (pl) => ({ ...pl, statuses: [...pl.statuses.filter((st) => st.status !== status.status), status] })),
+      }
+      const label = STATUS_TEXT[status.status]
+      fx.push({ kind: 'log', text: `${label?.icon ?? '•'} ${nick(p.playerId)} ${label?.label ?? status.status} (${status.turnsLeft}턴)` })
+      break
+    }
+    case 'STATUS_EXPIRED':
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, statuses: pl.statuses.filter((st) => st.status !== p.status) })) }
+      break
+    case 'HAND_REVEALED':
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, revealedHand: (p.hand as CardInstance[]) ?? [] })) }
+      break
+    case 'PLAY_FUMBLED':
+      fx.push({ kind: 'log', text: `🌀 ${nick(p.playerId)}: [${cardName(p.cardId)}] 내기가 버리기로 바뀜` })
+      if (p.playerId === view.viewerId) {
+        fx.push({ kind: 'toast', text: '저주 때문에 카드 내기가 버리기로 바뀌었습니다' })
+      }
+      break
+    case 'FIELD_LOCKS_CHANGED':
+      next = { ...next, fieldLocks: (p.locks as FieldLock[]) ?? [] }
+      break
+    case 'TURN_SKIPPED':
+      fx.push({ kind: 'log', text: `⏭ ${nick(p.playerId)} 차례 건너뜀` })
+      break
+    case 'TURN_LOCKED':
+      fx.push({ kind: 'log', text: `⏸ ${nick(p.playerId)} 아무것도 할 수 없음` })
+      break
+    case 'DIRECTION_CHANGED':
+      next = { ...next, direction: num(p.direction) }
+      fx.push({ kind: 'log', text: '🔄 순서가 반대로 바뀜' })
+      break
+    case 'TIME_BOMB_PLANTED':
+      next = { ...next, timeBomb: { ownerId: str(p.ownerId), p: num(p.p), damage: num(p.damage) } }
+      fx.push({ kind: 'log', text: `💣 ${nick(p.ownerId)}: 랜덤시한폭탄 설치` })
+      break
+    case 'TIME_BOMB_EXPLODED':
+      next = { ...next, timeBomb: null }
+      fx.push({ kind: 'log', text: `💥 폭탄이 ${nick(p.playerId)}에게 터짐!` })
+      break
+    case 'TIME_BOMB_REMOVED':
+      next = { ...next, timeBomb: null }
+      fx.push({ kind: 'log', text: '💣 시한폭탄 해제' })
+      break
+    case 'DRAW_COUNTDOWN_CHANGED':
+      next = { ...next, drawCountdown: typeof p.turnsLeft === 'number' ? p.turnsLeft : null }
+      break
+    case 'EXTRA_PLAY_STARTED': {
+      const extra: ExtraPlayState = {
+        mode: (str(p.mode) || 'ANY') as ExtraPlayState['mode'],
+        filter: (p.filter as ExtraPlayState['filter']) ?? null,
+        discardOnly: p.discardOnly === true,
+        attack: 0,
+      }
+      next = { ...next, extraPlay: extra }
+      fx.push({ kind: 'log', text: `➕ ${nick(p.playerId)}: ${extra.discardOnly ? '낼 카드가 없어 한 장 버려야 함' : EXTRA_MODE_TEXT[extra.mode]}` })
+      break
+    }
+    case 'TURN_ENDED':
+      next = { ...next, extraPlay: null }
+      break
+    case 'CARDS_BANNED':
+      fx.push({ kind: 'log', text: `🕳 게임에서 제외: ${((p.cardIds as string[]) ?? []).map(cardName).join(', ')}` })
+      break
     case 'ACTION_REJECTED':
       fx.push({ kind: 'sound', name: 'error' }, { kind: 'toast', text: str(p.message) || str(p.code) })
       if (p.code === 'STALE_VERSION') {

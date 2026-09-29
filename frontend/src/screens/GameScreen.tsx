@@ -8,6 +8,7 @@ import { ResultOverlay } from '../components/ResultOverlay'
 import { Seat } from '../components/Seat'
 import { TurnTimer } from '../components/TurnTimer'
 import { discardCard, playCard } from '../game/actions'
+import { describeFilter, EXTRA_MODE_TEXT } from '../game/describe'
 import { useApp } from '../store/app'
 import type { CardInfo, CardInstance } from '../types'
 
@@ -15,6 +16,7 @@ const REASON_TEXT: Record<string, string> = {
   CONDITION_UNMET: '조건 미충족',
   FIELD_LOCK: '필드 효과로 봉인',
   CURSE_LOCK: '저주로 봉인',
+  EXTRA_PLAY: '추가로 낼 수 없음',
 }
 
 /** 게임 화면. 모든 숫자는 서버가 보낸 값을 그대로 보여준다 */
@@ -37,11 +39,16 @@ export function GameScreen() {
   const others = game.players.filter((p) => p.playerId !== game.viewerId)
   const myTurn = game.status === 'IN_PROGRESS' && game.currentPlayerId === game.viewerId
   const current = game.players.find((p) => p.playerId === game.currentPlayerId)
+  // 추가 제출 중: 한 장 더 내거나, 버려서 끝낸다. 낼 카드가 없으면 버리기만 할 수 있다
+  const extra = myTurn ? game.extraPlay : null
+  const discarding = discardMode || extra?.discardOnly === true
+  const cardName = (cardId: string | null) => (cardId ? (game.cards[cardId]?.name ?? '?') : '?')
+  const nickOf = (playerId: string) => game.players.find((p) => p.playerId === playerId)?.nickname ?? '?'
 
   function onCardClick(instance: CardInstance) {
     if (!myTurn) return
     const card = game!.cards[instance.cardId]
-    if (discardMode) {
+    if (discarding) {
       discardCard(instance.instanceId)
       setDiscardMode(false)
       return
@@ -60,8 +67,14 @@ export function GameScreen() {
     setTargeting(null)
   }
 
+  // 천상의 보호막이 있는 다른 사람은 고를 수 없다 (서버도 거절한다)
+  const shielded = (playerId: string) =>
+    playerId !== game.viewerId && (game.players.find((p) => p.playerId === playerId)?.statuses ?? []).some((st) => st.status === 'UNTARGETABLE')
   const canTarget = (playerId: string, eliminated: boolean) =>
-    targeting !== null && !eliminated && (targeting.card.targeting === 'CHOSEN_ANY' || playerId !== game.viewerId)
+    targeting !== null &&
+    !eliminated &&
+    !shielded(playerId) &&
+    (targeting.card.targeting === 'CHOSEN_ANY' || playerId !== game.viewerId)
 
   return (
     <div className="flex h-full flex-col">
@@ -108,6 +121,9 @@ export function GameScreen() {
                 shake={shakes[p.playerId] ?? 0}
                 targetable={canTarget(p.playerId, p.eliminated)}
                 onClick={() => onSeatClick(p.playerId)}
+                defaultHandLimit={game.settings.handSize}
+                cardName={cardName}
+                nickOf={nickOf}
               />
             ))}
           </div>
@@ -125,9 +141,12 @@ export function GameScreen() {
                 shake={shakes[me.playerId] ?? 0}
                 targetable={canTarget(me.playerId, me.eliminated)}
                 onClick={() => onSeatClick(me.playerId)}
+                defaultHandLimit={game.settings.handSize}
+                cardName={cardName}
+                nickOf={nickOf}
               />
             )}
-            {myTurn && !targeting && (
+            {myTurn && !targeting && !extra?.discardOnly && (
               <button
                 type="button"
                 onClick={() => setDiscardMode(!discardMode)}
@@ -135,7 +154,7 @@ export function GameScreen() {
                   discardMode ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
                 }`}
               >
-                {discardMode ? '버리기 취소' : '카드 버리기'}
+                {discardMode ? '버리기 취소' : extra ? '한 장 버리고 끝내기' : '카드 버리기'}
               </button>
             )}
             {targeting && (
@@ -148,7 +167,19 @@ export function GameScreen() {
             )}
           </div>
 
-          {discardMode && <div className="text-sm text-rose-300">버릴 카드를 누르세요. 누적 데미지가 있으면 받습니다.</div>}
+          {extra && (
+            <div className="rounded-lg bg-amber-900/60 px-4 py-2 text-sm text-amber-100">
+              ➕{' '}
+              {extra.discardOnly
+                ? '낼 수 있는 카드가 없어 한 장을 버려야 합니다'
+                : `${EXTRA_MODE_TEXT[extra.mode]}${extra.filter ? ` · ${describeFilter(extra.filter)}만` : ''}`}
+            </div>
+          )}
+          {discarding && (
+            <div className="text-sm text-rose-300">
+              {extra ? '버릴 카드를 누르세요. 지금까지 낸 카드로 판정합니다.' : '버릴 카드를 누르세요. 누적 데미지가 있으면 받습니다.'}
+            </div>
+          )}
 
           <div className="flex min-h-48 flex-wrap justify-center gap-2 pb-4">
             <AnimatePresence>
@@ -156,8 +187,8 @@ export function GameScreen() {
                 const card = game.cards[instance.cardId]
                 if (!card) return null
                 const playability = game.playability[instance.instanceId]
-                const playable = myTurn && (discardMode || playability?.playable === true)
-                const blocked = myTurn && !discardMode && playability && !playability.playable
+                const playable = myTurn && (discarding || playability?.playable === true)
+                const blocked = myTurn && !discarding && playability && !playability.playable
                 return (
                   <motion.button
                     type="button"
@@ -172,7 +203,7 @@ export function GameScreen() {
                     disabled={!playable}
                     className={`relative ${playable ? 'cursor-pointer' : 'cursor-not-allowed'} ${myTurn ? '' : 'opacity-70'} ${
                       blocked ? 'opacity-45 grayscale' : ''
-                    } ${discardMode ? 'ring-2 ring-rose-500 rounded-xl' : ''}`}
+                    } ${discarding ? 'ring-2 ring-rose-500 rounded-xl' : ''}`}
                   >
                     <CardFace card={card} />
                     {blocked && playability?.reason && (

@@ -45,7 +45,11 @@ export function createDemo(emit: (message: ServerMessage) => void) {
     hp: 200,
     hpCap: 500,
     handCount: 5,
+    handLimit: 5,
     eliminated: false,
+    curse: null,
+    statuses: [],
+    revealedHand: null,
     hand: [],
   }))
   const draw = (): CardInstance => ({ instanceId: `d${++counter}`, cardId: CARDS[Math.floor(Math.random() * CARDS.length)].id })
@@ -166,6 +170,10 @@ export function createDemo(emit: (message: ServerMessage) => void) {
     currentAttack: 0,
     accumulatedDamage: 0,
     field: [],
+    fieldLocks: [],
+    timeBomb: null,
+    drawCountdown: null,
+    extraPlay: null,
     players: players.map(view),
     viewerId: me,
     myHand: players[0].hand,

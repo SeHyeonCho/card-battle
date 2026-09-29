@@ -65,6 +65,7 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 sample import 로그 정상).
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
+  Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
   (`npm run dev -- --port 5174`). Vite는 기본적으로 `localhost`(IPv6)에만 떠서 `127.0.0.1` 로는 안 열린다.
 - 복구·방어 동작 확인 완료 (실제 서버 + 브라우저 2개):
@@ -76,6 +77,6 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 다음 작업 순서
 
-1. Phase 2 화면: 저주·지속 상태·필드 락·시한폭탄·카운트다운 표시, 공개된 손패, 추가 제출 안내, 대상 선택 UX,
-   새 이벤트(`EventType`)를 `frontend/src/game/reduce.ts` 에서 처리. 그다음 원작 팩으로 실제 플레이
-2. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)
+1. 원작 효과음·이미지 연결 (`packs/original/assets/`, 검토 페이지에서 고른 결과로 카드 ID → 파일 대응표)
+2. 새로고침하면 게임 로그가 비는 문제 (스냅샷에 최근 로그 포함)
+3. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)

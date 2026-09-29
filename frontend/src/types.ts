@@ -33,15 +33,70 @@ export interface FieldCard {
   playedTurn: number
 }
 
+/** engine/view/PlayerView.Curse — 걸린 저주 */
+export interface CurseView {
+  cardId: string | null
+  casterId: string
+}
+
+/** engine/view/PlayerView.Status — 지속 상태 (UNTARGETABLE, REGEN, NEXT_ATTACK_BONUS) */
+export interface StatusView {
+  status: string
+  turnsLeft: number
+}
+
 /** engine/view/PlayerView */
 export interface PlayerView {
   playerId: string
   nickname: string
   seat: number
   hp: number
+  /** 실제 체력 상한 (저주로 줄어든 값 포함) */
   hpCap: number
   handCount: number
+  /** 실제 손패 한도 (저주로 고정된 값 포함) */
+  handLimit: number
   eliminated: boolean
+  curse: CurseView | null
+  statuses: StatusView[]
+  /** "지켜보고 있다" 저주로 공개된 손패. 공개되지 않았으면 null */
+  revealedHand: CardInstance[] | null
+}
+
+/** engine/state/FieldLock — 필드 카드가 거는 제출 제한 */
+export interface FieldLock {
+  sourceInstanceId: string
+  cardId: string
+  ownerId: string
+  filter: CardFilter
+  expiresAfterTurn: number
+}
+
+/** engine/rules/CardFilter */
+export interface CardFilter {
+  category?: string | string[]
+  subcategory?: string | string[]
+  tags?: string[]
+  attackGte?: number
+  attackLte?: number
+  hasEffects?: boolean | string[]
+  cardIds?: string[]
+  excludeCardIds?: string[]
+}
+
+/** engine/state/TimeBomb */
+export interface TimeBomb {
+  ownerId: string
+  p: number
+  damage: number
+}
+
+/** engine/state/ExtraPlayState — 추가 제출 진행 중 */
+export interface ExtraPlayState {
+  mode: 'ANY' | 'SUM' | 'DOUBLE' | 'HEAL_SELF'
+  filter: CardFilter | null
+  discardOnly: boolean
+  attack: number
 }
 
 /** engine/view/CardPlayabilityView */
@@ -49,7 +104,7 @@ export interface CardPlayability {
   instanceId: string
   playable: boolean
   code: string | null
-  reason: 'FIELD_LOCK' | 'CURSE_LOCK' | 'CONDITION_UNMET' | null
+  reason: 'FIELD_LOCK' | 'CURSE_LOCK' | 'CONDITION_UNMET' | 'EXTRA_PLAY' | null
   message: string | null
 }
 
@@ -81,6 +136,10 @@ export interface GameSnapshot {
   currentAttack: number
   accumulatedDamage: number
   field: FieldCard[]
+  fieldLocks: FieldLock[]
+  timeBomb: TimeBomb | null
+  drawCountdown: number | null
+  extraPlay: ExtraPlayState | null
   players: PlayerView[]
   viewerId: string
   myHand: CardInstance[]
