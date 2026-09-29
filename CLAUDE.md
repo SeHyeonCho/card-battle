@@ -55,7 +55,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - **원작 카드 데이터는 이 저장소에 절대 커밋하지 않는다.** 원작 팩은 `packs/original/`(gitignore, 로컬 전용)에 두고
   서버는 `app.packs.auto-import-dirs` 로 읽는다. 폴더가 없으면 경고만 남기고 넘어간다.
   카드 JSON은 `packs/original/generate.py` 로 다시 만든다 (출처: 나무위키 'EUD 랜덤카드배틀' 카드 목록).
-- 원작 이미지·사운드·BGM, 스타크래프트 리소스는 쓰지 않는다. 카드는 텍스트로, 효과음은 `tools/gen_sfx.py` 자체 제작.
+- 원작 이미지·사운드·BGM은 **비공개 플레이 전용**으로 쓴다. 파일은 `packs/original/assets/`(gitignore)에만 두고 커밋하지 않는다.
+  공개 저장소·공개 배포·`packs/sample` 에는 텍스트 카드와 `tools/gen_sfx.py` 자체 제작 효과음만 쓴다.
 - `packs/sample` 은 공개용 오리지널 카드만 둔다.
 
 ## 현재 상태 (Phase 1)

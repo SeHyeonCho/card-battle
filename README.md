@@ -92,7 +92,7 @@ packs/sample/
 
 원작 카드 데이터는 **이 저장소에 커밋하지 않는다.** gitignore 대상인 `packs/original/` 에 같은 형식으로 두면
 서버가 시작할 때 읽는다 (`pack.json` 의 `visibility` 는 `PRIVATE`). 폴더가 없으면 경고만 남기고 넘어간다.
-PRIVATE 팩은 서버 접근 코드를 아는 사람만 선택할 수 있다. 원작 이미지·사운드는 쓰지 않는다.
+PRIVATE 팩은 서버 접근 코드를 아는 사람만 선택할 수 있다. 원작 이미지·사운드·BGM도 비공개 플레이에만 쓰며, `packs/original/assets/` 에 두고 커밋하지 않는다.
 
 ## 효과 추가하기 (Phase 2)
 

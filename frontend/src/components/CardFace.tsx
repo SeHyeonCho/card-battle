@@ -15,7 +15,7 @@ interface Props {
   size?: 'hand' | 'field'
 }
 
-/** 카드 앞면. 이미지 없이 텍스트로만 그린다 (원작 이미지 미사용 원칙) */
+/** 카드 앞면. 지금은 이미지 없이 텍스트로만 그린다 */
 export function CardFace({ card, attack, size = 'hand' }: Props) {
   const style = STYLE[card.category]
   const big = size === 'field'
