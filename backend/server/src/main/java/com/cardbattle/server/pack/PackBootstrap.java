@@ -15,7 +15,7 @@ import java.util.List;
 
 /**
  * 서버 시작 시 app.packs.auto-import-dirs 의 카드팩 폴더를 자동으로 DB에 넣는다.
- * 원작 카드팩(private 저장소)도 이 설정에 폴더 경로만 추가하면 된다.
+ * 원작 카드팩은 로컬 전용 packs/original(gitignore)에 두며, 폴더가 없으면 경고만 남긴다.
  */
 @Component
 public class PackBootstrap implements ApplicationRunner {

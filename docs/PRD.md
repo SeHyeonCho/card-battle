@@ -487,7 +487,7 @@ LOBBY → STARTING → TURN_ACTIVE ⇄ EXTRA_PLAY
   * 참조하는 카드 ID(`FIELD_HAS_CARD`, `GIVE_CARDS` 등)가 팩 안에 존재하는지
   * `FIELD_LOCK.turns` ≤ 2, `weight` ≥ 0
 * 검증 실패 시 팩 전체를 거부하고 오류 위치(파일·카드 ID·필드)를 출력
-* **원작 팩 파일은 private 저장소에만 둔다** (공개 레포에는 샘플 팩만)
+* **원작 팩 파일은 로컬 `packs/original/`(gitignore)에만 둔다** (공개 레포에는 샘플 팩만)
 
 ---
 
@@ -604,7 +604,7 @@ game_event_log (game_id, seq, type, payload jsonb, created_at)   -- 게임 종�
 | 재현성 | 게임별 seed + 입력 로그로 같은 게임을 그대로 재실행할 수 있다 |
 | 관측성 | 구조화 로그(gameId, seq 포함), 행동 처리 시간·활성 방 수·WebSocket 연결 수 메트릭 |
 | 브라우저 | 데스크톱 최신 Chrome / Edge / Firefox / Safari. 모바일 브라우저는 Phase 3 |
-| 법적 | 원작 카드 데이터는 private 저장소·서버에만 존재, 원작 이미지·사운드·BGM 미사용 |
+| 법적 | 원작 카드 데이터는 로컬(gitignore)·서버에만 존재, 원작 이미지·사운드·BGM 미사용 |
 
 ---
 

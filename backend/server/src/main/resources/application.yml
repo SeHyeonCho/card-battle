@@ -30,9 +30,10 @@ app:
   session-ttl: 24h
   packs:
     # 서버 시작 시 자동으로 불러올 카드팩 폴더 (backend/server 기준 상대 경로)
-    # 원작 카드팩은 private 저장소 경로를 여기에 추가한다. 예) ../../../card-battle-private/packs/original
+    # packs/original 은 원작 카드팩(gitignore, 로컬 전용). 폴더가 없으면 경고만 남기고 넘어간다
     auto-import-dirs:
       - ../../packs/sample
+      - ../../packs/original
 
 logging:
   level:
