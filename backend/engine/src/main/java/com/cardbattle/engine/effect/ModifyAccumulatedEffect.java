@@ -43,7 +43,7 @@ public final class ModifyAccumulatedEffect implements EffectHandler {
     }
 
     @Override
-    public List<String> validate(EffectSpec spec, String path) {
+    public List<String> validate(EffectSpec spec, String path, PackCheck check) {
         List<String> errors = new ArrayList<>();
         String op = spec.str("op");
         if (op == null || !OPS.contains(op)) {

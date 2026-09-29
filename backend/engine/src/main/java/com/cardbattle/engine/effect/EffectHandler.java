@@ -25,7 +25,7 @@ public interface EffectHandler {
     Set<String> params();
 
     /** 팩 import 시 파라미터 검증. 오류 메시지 목록을 돌려준다 */
-    default List<String> validate(EffectSpec spec, String path) {
+    default List<String> validate(EffectSpec spec, String path, PackCheck check) {
         return List.of();
     }
 }

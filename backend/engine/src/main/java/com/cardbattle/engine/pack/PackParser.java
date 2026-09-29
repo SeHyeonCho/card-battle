@@ -152,6 +152,26 @@ public final class PackParser {
         return c;
     }
 
+    /** 효과 파라미터 안에 든 효과 배열(예: CHANCE의 then)을 EffectSpec 목록으로 바꾼다 */
+    public static List<EffectSpec> effects(Object raw, String path) {
+        List<String> errors = new ArrayList<>();
+        List<EffectSpec> out = new ArrayList<>();
+        if (!(raw instanceof List<?> list)) {
+            errors.add(path + ": 효과 배열이어야 합니다");
+        } else {
+            for (int i = 0; i < list.size(); i++) {
+                EffectSpec e = parseEffect(list.get(i), path + "[" + i + "]", errors);
+                if (e != null) {
+                    out.add(e);
+                }
+            }
+        }
+        if (!errors.isEmpty()) {
+            throw new PackFormatException(errors);
+        }
+        return out;
+    }
+
     private static EffectSpec parseEffect(Object o, String path, List<String> errors) {
         if (!(o instanceof Map<?, ?> raw)) {
             errors.add(path + ": 객체여야 합니다");

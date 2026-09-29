@@ -110,6 +110,31 @@ public final class TurnContext {
                 "playerId", target.getPlayerId(), "hp", after, "delta", after - before, "cause", cause));
     }
 
+    /** 체력을 정해진 값으로 만든다 (체력 상한까지). 탈락 판정은 정산에서 한다 */
+    public void setHp(PlayerState target, int value, String cause) {
+        if (!target.alive()) {
+            return;
+        }
+        int before = target.getHp();
+        int after = Math.min(target.getHpCap(), value);
+        if (after == before) {
+            return;
+        }
+        target.setHp(after);
+        events.toAll(EventType.HP_CHANGED, payload(
+                "playerId", target.getPlayerId(), "hp", after, "delta", after - before, "cause", cause));
+    }
+
+    /** 손패 한도를 바꾼다 (최소 1) */
+    public void setHandLimit(PlayerState target, int limit) {
+        int next = Math.max(1, limit);
+        if (next == target.getHandLimit()) {
+            return;
+        }
+        target.setHandLimit(next);
+        events.toAll(EventType.HAND_LIMIT_CHANGED, payload("playerId", target.getPlayerId(), "handLimit", next));
+    }
+
     /** 현재 공격력과 누적 데미지를 바꾸고 이벤트를 남긴다 */
     public void setChain(int currentAttack, int accumulatedDamage) {
         int a = Math.max(0, currentAttack);

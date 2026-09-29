@@ -3,17 +3,21 @@ package com.cardbattle.engine;
 import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardInstance;
 import com.cardbattle.engine.card.CardPack;
+import com.cardbattle.engine.card.EffectSpec;
 import com.cardbattle.engine.card.Timing;
 import com.cardbattle.engine.command.DiscardCommand;
 import com.cardbattle.engine.command.PlayCommand;
+import com.cardbattle.engine.effect.ConditionalAttackEffect;
 import com.cardbattle.engine.effect.EffectRegistry;
 import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
 import com.cardbattle.engine.event.GameEvent;
+import com.cardbattle.engine.pack.PackParser;
 import com.cardbattle.engine.result.ActionResult;
 import com.cardbattle.engine.result.Playability;
 import com.cardbattle.engine.result.RejectCode;
 import com.cardbattle.engine.result.Rejection;
+import com.cardbattle.engine.rules.ConditionEvaluator;
 import com.cardbattle.engine.rules.PlayabilityChecker;
 import com.cardbattle.engine.rules.TurnContext;
 import com.cardbattle.engine.rules.TurnResolver;
@@ -137,7 +141,7 @@ public final class GameEngine {
         EventSink events = new EventSink(state);
         actor.getHand().remove(inst);
         actor.setConsecutiveTimeouts(0);
-        int attack = card.attackCard() ? rollAttack(state, card) : 0;
+        int attack = card.attackCard() ? attackFor(state, actor, card) : 0;
         TurnContext ctx = new TurnContext(state, pack, actor, card, attack, chosen, events);
 
         events.toAll(EventType.CARD_PLAYED, payload(
@@ -279,10 +283,21 @@ public final class GameEngine {
         return card;
     }
 
-    private static int rollAttack(GameState state, CardDefinition card) {
-        if (card.randomAttack()) {
-            return GameRng.between(state, card.attackMin(), card.attackMax());
+    /**
+     * 이번에 낼 공격 카드의 실제 공격력. 랜덤 공격력을 굴리고 CONDITIONAL_ATTACK을 반영한다.
+     * 필드를 교체하기 전에 부르므로 조건은 직전 필드를 본다 (D12).
+     */
+    private int attackFor(GameState state, PlayerState actor, CardDefinition card) {
+        int attack = card.randomAttack()
+                ? GameRng.between(state, card.attackMin(), card.attackMax())
+                : card.attack();
+        ConditionEvaluator conditions = new ConditionEvaluator(pack);
+        for (EffectSpec e : card.effectsAt(Timing.ON_PLAY)) {
+            if ("CONDITIONAL_ATTACK".equals(e.type())
+                    && conditions.test(PackParser.condition(e.raw("condition"), "condition"), state, actor)) {
+                attack = ConditionalAttackEffect.adjust(attack, e);
+            }
         }
-        return card.attack();
+        return attack;
     }
 }

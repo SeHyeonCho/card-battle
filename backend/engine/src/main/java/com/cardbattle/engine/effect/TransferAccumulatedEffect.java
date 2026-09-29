@@ -48,7 +48,7 @@ public final class TransferAccumulatedEffect implements EffectHandler {
     }
 
     @Override
-    public List<String> validate(EffectSpec spec, String path) {
+    public List<String> validate(EffectSpec spec, String path, PackCheck check) {
         List<String> errors = new ArrayList<>();
         Validations.requireTarget(spec, "to", path, errors);
         if (spec.integer("multiplier") != null && (!spec.integerParam("multiplier") || spec.integer("multiplier") < 1)) {

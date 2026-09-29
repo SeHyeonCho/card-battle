@@ -2,17 +2,17 @@ package com.cardbattle.engine.pack;
 
 import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
-import com.cardbattle.engine.card.ConditionSpec;
 import com.cardbattle.engine.card.EffectSpec;
 import com.cardbattle.engine.card.Timing;
-import com.cardbattle.engine.effect.EffectHandler;
 import com.cardbattle.engine.effect.EffectRegistry;
+import com.cardbattle.engine.effect.PackCheck;
 import com.cardbattle.engine.rules.ConditionEvaluator;
 
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -24,6 +24,8 @@ public final class PackValidator {
     private static final Pattern PACK_CODE = Pattern.compile("[a-z0-9][a-z0-9_-]{0,63}");
     private static final Set<Timing> SUPPORTED_TIMINGS = EnumSet.of(Timing.ON_PLAY, Timing.ON_RECEIVE,
             Timing.ON_TURN_END);
+
+    private static final Set<String> TARGET_KEYS = Set.of("target", "to", "scope");
 
     private final EffectRegistry effects;
 
@@ -96,36 +98,16 @@ public final class PackValidator {
             errors.addAll(conditions.validate(card.conditions().get(i), path + ".conditions[" + i + "]"));
         }
 
+        PackCheck check = new PackCheck(pack, conditions, effects);
         boolean usesChosen = false;
         for (int i = 0; i < card.effects().size(); i++) {
             EffectSpec e = card.effects().get(i);
             String ePath = path + ".effects[" + i + "]";
-            EffectHandler handler = effects.handler(e.type());
-            if (handler == null) {
-                errors.add(ePath + ".type: 지원하지 않는 효과 '" + e.type() + "' (지원: " + effects.supportedTypes() + ")");
-                continue;
-            }
             if (!SUPPORTED_TIMINGS.contains(e.timing())) {
                 errors.add(ePath + ".timing: '" + e.timing() + "' 은 아직 지원하지 않습니다");
             }
-            errors.addAll(handler.validate(e, ePath));
-            for (String key : e.params().keySet()) {
-                if (!EffectRegistry.WHEN.equals(key) && !handler.params().contains(key)) {
-                    errors.add(ePath + "." + key + ": " + e.type() + " 에서 쓸 수 없는 파라미터입니다 (지원: "
-                            + handler.params() + ", when)");
-                }
-            }
-            if (e.raw(EffectRegistry.WHEN) != null) {
-                try {
-                    ConditionSpec when = PackParser.condition(e.raw(EffectRegistry.WHEN), ePath + ".when");
-                    errors.addAll(conditions.validate(when, ePath + ".when"));
-                } catch (PackFormatException ex) {
-                    errors.addAll(ex.errors());
-                }
-            }
-            if ("CHOSEN".equals(e.str("target")) || "CHOSEN".equals(e.str("to"))) {
-                usesChosen = true;
-            }
+            errors.addAll(check.effect(e, ePath));
+            usesChosen |= mentionsChosen(e.params());
         }
         if (usesChosen && !card.targeting().requiresChoice()) {
             errors.add(path + ".targeting: 효과가 CHOSEN 대상을 쓰면 CHOSEN_OTHER 또는 CHOSEN_ANY 여야 합니다");
@@ -133,5 +115,26 @@ public final class PackValidator {
         if (!usesChosen && card.targeting().requiresChoice()) {
             errors.add(path + ".targeting: 대상을 고르지만 CHOSEN을 쓰는 효과가 없습니다");
         }
+    }
+
+    /** 효과 파라미터 어디에든(중첩 효과·저주 정의 포함) 대상으로 CHOSEN을 쓰는지 */
+    private static boolean mentionsChosen(Object v) {
+        if (v instanceof Map<?, ?> m) {
+            for (Map.Entry<?, ?> entry : m.entrySet()) {
+                if (TARGET_KEYS.contains(String.valueOf(entry.getKey())) && "CHOSEN".equals(entry.getValue())) {
+                    return true;
+                }
+                if (mentionsChosen(entry.getValue())) {
+                    return true;
+                }
+            }
+        } else if (v instanceof List<?> list) {
+            for (Object x : list) {
+                if (mentionsChosen(x)) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 }

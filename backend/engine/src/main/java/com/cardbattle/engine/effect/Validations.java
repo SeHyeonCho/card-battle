@@ -2,6 +2,7 @@ package com.cardbattle.engine.effect;
 
 import com.cardbattle.engine.card.EffectSpec;
 import com.cardbattle.engine.rules.TargetResolver;
+import com.cardbattle.engine.rules.TurnContext;
 
 import java.util.List;
 
@@ -24,5 +25,16 @@ final class Validations {
         if (!spec.integerParam(key) || spec.integer(key) <= 0) {
             errors.add(path + "." + key + ": 1 이상의 정수가 필요합니다");
         }
+    }
+
+    static void requireProbability(EffectSpec spec, String key, String path, List<String> errors) {
+        if (!(spec.raw(key) instanceof Number n) || n.doubleValue() < 0 || n.doubleValue() > 1) {
+            errors.add(path + "." + key + ": 0~1 사이의 확률이 필요합니다");
+        }
+    }
+
+    /** [0, 1) 난수가 p보다 작으면 참. 시드 기반이라 재현된다 */
+    static boolean roll(TurnContext ctx, double p) {
+        return ctx.random(1_000_000) < Math.round(p * 1_000_000);
     }
 }

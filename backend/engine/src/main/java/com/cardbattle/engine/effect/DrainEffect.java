@@ -9,14 +9,14 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * 대상의 체력을 깎는다. 반동 데미지는 target을 SELF로 쓴다.
- * <pre>{ "type": "DAMAGE", "target": "ALL_OTHERS", "amount": 10 }</pre>
+ * 대상마다 체력을 amount만큼 깎고, 깎은 합만큼 낸 사람이 회복한다 (생존왕, 찰지구나).
+ * <pre>{ "type": "DRAIN", "target": "ALL_OTHERS", "amount": 15 }</pre>
  */
-public final class DamageEffect implements EffectHandler {
+public final class DrainEffect implements EffectHandler {
 
     @Override
     public String type() {
-        return "DAMAGE";
+        return "DRAIN";
     }
 
     @Override
@@ -27,9 +27,15 @@ public final class DamageEffect implements EffectHandler {
     @Override
     public void apply(TurnContext ctx, EffectSpec spec) {
         int amount = spec.integer("amount", 0);
+        int total = 0;
         for (PlayerState target : ctx.resolveTargets(spec.str("target"))) {
-            ctx.damage(target, amount, "EFFECT");
+            if (target == ctx.actor()) {
+                continue;
+            }
+            ctx.damage(target, amount, "DRAIN");
+            total += amount;
         }
+        ctx.heal(ctx.actor(), total, "DRAIN");
     }
 
     @Override
