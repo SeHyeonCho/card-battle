@@ -58,6 +58,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 원작 이미지·사운드·BGM은 **비공개 플레이 전용**으로 쓴다. 파일은 `packs/original/assets/`(gitignore)에만 두고 커밋하지 않는다.
   공개 저장소·공개 배포·`packs/sample` 에는 텍스트 카드와 `tools/gen_sfx.py` 자체 제작 효과음만 쓴다.
 - `packs/sample` 은 공개용 오리지널 카드만 둔다.
+- 카드팩 폴더에 `assets/sounds/manifest.json`(카드 ID → mp3)이 있으면 서버가 `/api/packs/{code}/sounds` 로 제공하고,
+  화면은 카드를 낼 때 그 소리를 재생한다 (없으면 기본 효과음). 원작 소리 파일은 로컬 전용.
 
 ## 현재 상태 (Phase 1)
 
@@ -77,6 +79,6 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 다음 작업 순서
 
-1. 원작 효과음·이미지 연결 (`packs/original/assets/`, 검토 페이지에서 고른 결과로 카드 ID → 파일 대응표)
+1. 원작 이미지 연결 (효과음은 연결 완료: `packs/original/assets/picks.json` → `build_sounds.py` → `assets/sounds/`)
 2. 새로고침하면 게임 로그가 비는 문제 (스냅샷에 최근 로그 포함)
 3. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)

@@ -52,6 +52,8 @@ export interface GameView {
 /** 상태 변화와 함께 일어나야 하는 연출 (소리, 떠오르는 숫자, 로그 등) */
 export type Fx =
   | { kind: 'sound'; name: SfxName }
+  /** 카드를 냈을 때: 카드팩에 그 카드의 소리가 있으면 그것을, 없으면 기본 카드 소리를 낸다 */
+  | { kind: 'cardSound'; cardId: string }
   | { kind: 'floater'; playerId: string; delta: number }
   | { kind: 'shake'; playerId: string }
   | { kind: 'log'; text: string }
@@ -145,7 +147,7 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
       }
       const attack = typeof p.attack === 'number' ? ` (공격력 ${p.attack})` : ''
       const target = p.targetId ? ` → ${nick(p.targetId)}` : ''
-      fx.push({ kind: 'sound', name: 'card' }, { kind: 'log', text: `${nick(p.playerId)}: [${cardName(p.cardId)}]${attack}${target}` })
+      fx.push({ kind: 'cardSound', cardId: str(p.cardId) }, { kind: 'log', text: `${nick(p.playerId)}: [${cardName(p.cardId)}]${attack}${target}` })
       break
     }
     case 'CARD_DISCARDED':

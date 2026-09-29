@@ -26,12 +26,15 @@ public class PackBootstrap implements ApplicationRunner {
     private final PackFiles files;
     private final PackImportService importer;
     private final PackCatalog catalog;
+    private final PackAssets assets;
 
-    public PackBootstrap(AppProperties props, PackFiles files, PackImportService importer, PackCatalog catalog) {
+    public PackBootstrap(AppProperties props, PackFiles files, PackImportService importer, PackCatalog catalog,
+                         PackAssets assets) {
         this.props = props;
         this.files = files;
         this.importer = importer;
         this.catalog = catalog;
+        this.assets = assets;
     }
 
     @Override
@@ -52,6 +55,7 @@ public class PackBootstrap implements ApplicationRunner {
                 PackFiles.RawPack raw = files.read(dir);
                 PackImportService.Result result = importer.importPack(raw.meta(), raw.cards());
                 log.info("카드팩 {} → {}", dir.getFileName(), result);
+                assets.register(String.valueOf(raw.meta().get("code")), dir);
             } catch (PackFormatException e) {
                 log.error("카드팩 {} 을(를) 불러오지 못했습니다\n{}", dir, e.getMessage());
             } catch (IOException | RuntimeException e) {

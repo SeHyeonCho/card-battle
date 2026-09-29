@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { api } from '../api/http'
 import { sfx } from '../audio/sfx'
 import { fromSnapshot, reduce, type Fx, type GameView } from '../game/reduce'
 import { send, subscribeGame, subscribeRoom, unsubscribeGame, type RoomMessage } from '../net/connection'
@@ -36,6 +37,9 @@ interface AppState {
   floaters: Floater[]
   /** playerId → 흔들기 카운터 (값이 바뀔 때마다 좌석이 흔들린다) */
   shakes: Record<string, number>
+  /** 카드 ID → 효과음 주소 (카드팩에 카드별 소리가 있을 때) */
+  cardSounds: Record<string, string>
+  cardSoundsPack: string | null
 
   setSession: (session: Session | null) => void
   enterRoom: (room: Room) => void
@@ -53,12 +57,35 @@ export const INVITE_KEY = 'last-invite'
 let nextId = 1
 
 export const useApp = create<AppState>((set, get) => {
+  /** 카드팩의 카드별 효과음 주소를 한 번 받아 둔다. 없거나 실패하면 기본 소리를 쓴다 */
+  function loadCardSounds(packCode: string) {
+    if (get().cardSoundsPack === packCode) return
+    set({ cardSounds: {}, cardSoundsPack: packCode })
+    api
+      .cardSounds(packCode)
+      .then((cardSounds) => {
+        if (get().cardSoundsPack === packCode) set({ cardSounds })
+      })
+      .catch(() => {
+        // 효과음은 없어도 게임은 된다
+      })
+  }
+
   function runFx(fx: Fx[]) {
     for (const f of fx) {
       switch (f.kind) {
         case 'sound':
           sfx.play(f.name)
           break
+        case 'cardSound': {
+          const url = get().cardSounds[f.cardId]
+          if (url) {
+            sfx.playUrl(url)
+          } else {
+            sfx.play('card')
+          }
+          break
+        }
         case 'log':
           set((s) => ({ log: [...s.log.slice(-49), { id: nextId++, text: f.text }] }))
           break
@@ -96,6 +123,8 @@ export const useApp = create<AppState>((set, get) => {
     toasts: [],
     floaters: [],
     shakes: {},
+    cardSounds: {},
+    cardSoundsPack: null,
 
     setSession: (session) => {
       writeStorage(SESSION_KEY, session)
@@ -126,7 +155,9 @@ export const useApp = create<AppState>((set, get) => {
 
     handleGameMessage: (message) => {
       if (message.type === 'SNAPSHOT') {
-        set({ game: fromSnapshot(message.payload as unknown as GameSnapshot), screen: 'game' })
+        const snapshot = message.payload as unknown as GameSnapshot
+        set({ game: fromSnapshot(snapshot), screen: 'game' })
+        loadCardSounds(snapshot.packCode)
         return
       }
       const game = get().game
