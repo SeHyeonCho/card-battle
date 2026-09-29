@@ -29,6 +29,8 @@ public enum EventType {
     TIME_BOMB_EXPLODED,
     TIME_BOMB_REMOVED,
     DRAW_COUNTDOWN_CHANGED,
+    /** 추가 제출 시작: 같은 플레이어가 한 장 더 낸다 */
+    EXTRA_PLAY_STARTED,
     PLAYER_ELIMINATED,
     TURN_ENDED,
     GAME_ENDED,

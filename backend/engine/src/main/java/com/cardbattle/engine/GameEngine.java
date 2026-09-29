@@ -17,12 +17,14 @@ import com.cardbattle.engine.result.ActionResult;
 import com.cardbattle.engine.result.Playability;
 import com.cardbattle.engine.result.RejectCode;
 import com.cardbattle.engine.result.Rejection;
+import com.cardbattle.engine.rules.ChainOutcome;
 import com.cardbattle.engine.rules.ConditionEvaluator;
 import com.cardbattle.engine.rules.Passives;
 import com.cardbattle.engine.rules.PlayabilityChecker;
 import com.cardbattle.engine.rules.Statuses;
 import com.cardbattle.engine.rules.TurnContext;
 import com.cardbattle.engine.rules.TurnResolver;
+import com.cardbattle.engine.state.ExtraPlayState;
 import com.cardbattle.engine.state.FieldCard;
 import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
@@ -158,9 +160,15 @@ public final class GameEngine {
         }
 
         actor.getHand().remove(inst);
+        ExtraPlayState combo = state.getExtraPlay();
+        String mode = combo == null ? null : combo.getMode();
         int attack = card.attackCard() ? attackFor(state, actor, card) : 0;
+        if ("DOUBLE".equals(mode) && card.attackCard() && !combo.getNoDoubleCardIds().contains(card.id())) {
+            attack *= 2; // 슈퍼파워
+        }
         TurnContext ctx = new TurnContext(state, pack, actor, card, attack, chosen, events);
         ctx.setCardInstanceId(inst.instanceId());
+        restoreCombo(ctx, combo);
         StatusState bonus = actor.status(Statuses.NEXT_ATTACK_BONUS);
         if (card.attackCard() && bonus != null && bonus.getAppliedTurn() < state.getTurnNumber()) {
             ctx.removeStatus(actor, bonus); // 스팀팩 보너스는 공격 카드 한 장에 한 번 쓰인다
@@ -175,17 +183,93 @@ public final class GameEngine {
 
         // 효과와 조건은 "직전 필드"를 본다. 필드 교체는 판정 뒤에 한다 (7.7)
         effects.run(ctx, ctx.cardEffects(Timing.ON_PLAY));
-        resolver.judge(ctx);
-        state.setField(List.of(new FieldCard(inst.instanceId(), card.id(), actor.getPlayerId(), attack,
-                state.getTurnNumber())));
-        events.toAll(EventType.FIELD_CHANGED, payload("field", List.copyOf(state.getField())));
-        // 필드가 바뀌면 이전 필드 카드의 락은 풀린다 (방금 낸 카드가 건 락만 남는다)
-        if (state.getFieldLocks().removeIf(l -> !l.getSourceInstanceId().equals(inst.instanceId()))) {
-            events.toAll(EventType.FIELD_LOCKS_CHANGED, payload("locks", List.copyOf(state.getFieldLocks())));
+        if ("HEAL_SELF".equals(mode) && card.attackCard()) {
+            ctx.heal(actor, ctx.attack(), "CONSUME"); // 컨슘: 공격력만큼 회복하고, 이 카드는 공격으로 치지 않는다
+            ctx.setAttackCounts(false);
         }
 
+        // 추가 제출이 있었다면 지금까지 낸 카드를 모아 한 번에 판정한다
+        int total = (combo == null ? 0 : combo.getAttack()) + (ctx.attackCounts() ? ctx.attack() : 0);
+        boolean attackPlayed = (combo != null && combo.isAttackPlayed()) || ctx.attackCounts();
+        List<FieldCard> played = new ArrayList<>(combo == null ? List.of() : combo.getPlayed());
+        played.add(new FieldCard(inst.instanceId(), card.id(), actor.getPlayerId(), attack, state.getTurnNumber()));
+        played.addAll(ctx.extraFieldCards());
+
+        if (ctx.extraRequest() != null && startExtraPlay(state, actor, ctx, played, total, attackPlayed, events)) {
+            return ActionResult.accepted(events.commit());
+        }
+        state.setExtraPlay(null);
+        ctx.setAttack(total);
+        ctx.setAttackCounts(attackPlayed);
+        return finishTurn(state, ctx, played, events);
+    }
+
+    /** 누적 판정 → 필드 교체 → 정산. 필드는 이번 턴에 낸 카드들로 바뀌고, 그 카드들이 건 락만 남는다 */
+    private ActionResult finishTurn(GameState state, TurnContext ctx, List<FieldCard> played, EventSink events) {
+        resolver.judge(ctx);
+        if (!played.isEmpty()) {
+            state.setField(played);
+            events.toAll(EventType.FIELD_CHANGED, payload("field", List.copyOf(state.getField())));
+            List<String> ids = played.stream().map(FieldCard::instanceId).toList();
+            if (state.getFieldLocks().removeIf(l -> !ids.contains(l.getSourceInstanceId()))) {
+                events.toAll(EventType.FIELD_LOCKS_CHANGED, payload("locks", List.copyOf(state.getFieldLocks())));
+            }
+        }
         resolver.settle(ctx);
         return ActionResult.accepted(events.commit());
+    }
+
+    /**
+     * 추가 제출 상태로 들어간다 (턴은 끝나지 않고 타이머도 그대로). 낼 수 있는 카드가 없으면
+     * discardIfNone일 때는 버리기만 할 수 있는 상태가 되고, 아니면 추가 제출 없이 끝낸다(false).
+     */
+    @SuppressWarnings("unchecked")
+    private boolean startExtraPlay(GameState state, PlayerState actor, TurnContext ctx, List<FieldCard> played,
+                                   int total, boolean attackPlayed, EventSink events) {
+        EffectSpec req = ctx.extraRequest();
+        ExtraPlayState next = new ExtraPlayState();
+        next.setPlayed(played);
+        next.setAttack(total);
+        next.setAttackPlayed(attackPlayed);
+        next.setImmune(ctx.immune());
+        next.setOutcome(ctx.outcome() == null ? null : ctx.outcome().name());
+        next.setMode(req.str("attackMode", "ANY"));
+        next.setFilter(req.raw("filter") instanceof Map<?, ?> f ? (Map<String, Object>) f : null);
+        next.setNoDoubleCardIds(req.raw("noDoubleCardIds") instanceof List<?> ids
+                ? ids.stream().map(String::valueOf).toList() : List.of());
+        next.setLastCardId(ctx.card().id());
+        next.setLastInstanceId(ctx.cardInstanceId());
+        next.setChosenTargetId(ctx.chosenTarget() == null ? null : ctx.chosenTarget().getPlayerId());
+        state.setExtraPlay(next);
+
+        boolean canPlay = actor.getHand().stream()
+                .anyMatch(c -> playability.check(state, actor, requireCard(c), null).playable());
+        if (!canPlay) {
+            if (!req.bool("discardIfNone", false) || actor.getHand().isEmpty()) {
+                state.setExtraPlay(null);
+                return false;
+            }
+            next.setDiscardOnly(true);
+        }
+        events.toAll(EventType.EXTRA_PLAY_STARTED, payload(
+                "playerId", actor.getPlayerId(), "mode", next.getMode(), "filter", next.getFilter(),
+                "discardOnly", next.isDiscardOnly()));
+        events.toPlayer(actor.getPlayerId(), EventType.PLAYABILITY_UPDATED,
+                payload("cards", resolver.playabilityOf(state, actor)));
+        return true;
+    }
+
+    /** 추가 제출 중이던 면역·누적 판정 결과를 이어받는다 */
+    private static void restoreCombo(TurnContext ctx, ExtraPlayState combo) {
+        if (combo == null) {
+            return;
+        }
+        if (combo.isImmune()) {
+            ctx.grantImmunity();
+        }
+        if (combo.getOutcome() != null) {
+            ctx.decideOutcome(ChainOutcome.valueOf(combo.getOutcome()));
+        }
     }
 
     // ------------------------------------------------------------------
@@ -210,10 +294,28 @@ public final class GameEngine {
         actor.getHand().remove(inst);
         events.toAll(EventType.CARD_DISCARDED, payload(
                 "playerId", actor.getPlayerId(), "cardId", inst.cardId(), "instanceId", inst.instanceId()));
-        TurnContext ctx = new TurnContext(state, pack, actor, null, 0, null, events);
-        resolver.judge(ctx);
-        resolver.settle(ctx);
-        return ActionResult.accepted(events.commit());
+        return endWithoutPlay(state, actor, events);
+    }
+
+    /**
+     * 카드를 내지 않고 턴을 끝낸다 (버리기·시간 초과). 추가 제출 중이었다면 그때까지 낸 카드로 판정한다.
+     */
+    private ActionResult endWithoutPlay(GameState state, PlayerState actor, EventSink events) {
+        ExtraPlayState combo = state.getExtraPlay();
+        if (combo == null) {
+            TurnContext ctx = new TurnContext(state, pack, actor, null, 0, null, events);
+            resolver.judge(ctx);
+            resolver.settle(ctx);
+            return ActionResult.accepted(events.commit());
+        }
+        state.setExtraPlay(null);
+        PlayerState chosen = combo.getChosenTargetId() == null ? null : state.player(combo.getChosenTargetId());
+        TurnContext ctx = new TurnContext(state, pack, actor, pack.card(combo.getLastCardId()), combo.getAttack(),
+                chosen, events);
+        ctx.setCardInstanceId(combo.getLastInstanceId());
+        restoreCombo(ctx, combo);
+        ctx.setAttackCounts(combo.isAttackPlayed());
+        return finishTurn(state, ctx, combo.getPlayed(), events);
     }
 
     // ------------------------------------------------------------------
@@ -237,10 +339,7 @@ public final class GameEngine {
         events.toAll(EventType.TURN_TIMED_OUT, payload(
                 "playerId", actor.getPlayerId(), "cardId", cardId, "instanceId", instanceId,
                 "consecutiveTimeouts", actor.getConsecutiveTimeouts()));
-        TurnContext ctx = new TurnContext(state, pack, actor, null, 0, null, events);
-        resolver.judge(ctx);
-        resolver.settle(ctx);
-        return ActionResult.accepted(events.commit());
+        return endWithoutPlay(state, actor, events);
     }
 
     // ------------------------------------------------------------------
@@ -267,6 +366,7 @@ public final class GameEngine {
                 List.copyOf(state.getFieldLocks()),
                 state.getTimeBomb(),
                 state.getDrawCountdown(),
+                state.getExtraPlay(),
                 playerViews(state),
                 viewerId,
                 myHand,

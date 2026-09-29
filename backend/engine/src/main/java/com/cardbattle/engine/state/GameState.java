@@ -40,6 +40,8 @@ public class GameState {
     private TimeBomb timeBomb;
     /** 무승부까지 남은 턴 수 (카페베네). 없으면 null */
     private Integer drawCountdown;
+    /** 추가 제출 진행 중이면 그 상태, 아니면 null */
+    private ExtraPlayState extraPlay;
     /** 상태 버전. 행동이 하나 처리될 때마다 1씩 오른다 (낙관적 동시성 제어) */
     private long version;
     /** 다음 이벤트 일련번호 */
@@ -267,5 +269,13 @@ public class GameState {
 
     public void setDrawCountdown(Integer drawCountdown) {
         this.drawCountdown = drawCountdown;
+    }
+
+    public ExtraPlayState getExtraPlay() {
+        return extraPlay;
+    }
+
+    public void setExtraPlay(ExtraPlayState extraPlay) {
+        this.extraPlay = extraPlay;
     }
 }

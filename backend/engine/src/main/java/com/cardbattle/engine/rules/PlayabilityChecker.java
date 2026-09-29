@@ -4,6 +4,7 @@ import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
 import com.cardbattle.engine.result.PlayBlockReason;
 import com.cardbattle.engine.result.Playability;
+import com.cardbattle.engine.state.ExtraPlayState;
 import com.cardbattle.engine.state.FieldLock;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
@@ -30,6 +31,16 @@ public final class PlayabilityChecker {
      *                 (손패 표시용 PLAYABILITY_UPDATED에서 사용)
      */
     public Playability check(GameState state, PlayerState player, CardDefinition card, String targetId) {
+        // 추가 제출 중이면 추가로 낼 수 있는 카드인지 먼저 본다
+        ExtraPlayState extra = state.getExtraPlay();
+        if (extra != null && player == state.currentPlayer()) {
+            if (extra.isDiscardOnly()) {
+                return Playability.blocked(PlayBlockReason.EXTRA_PLAY, "낼 수 있는 카드가 없어 한 장을 버려야 합니다");
+            }
+            if (extra.getFilter() != null && !CardFilter.matches(extra.getFilter(), card)) {
+                return Playability.blocked(PlayBlockReason.EXTRA_PLAY, "추가로 낼 수 있는 카드가 아닙니다");
+            }
+        }
         if (!card.alwaysPlayable()) {
             // 4. 필드 락
             FieldLock lock = fieldLock(state, card);

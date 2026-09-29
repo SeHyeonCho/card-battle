@@ -51,8 +51,7 @@ public final class TurnResolver {
             return; // 효과(예: 데미지 전달)가 이미 결정함
         }
         GameState state = ctx.state();
-        CardDefinition card = ctx.card();
-        if (card != null && card.attackCard()) {
+        if (ctx.attackCounts()) {
             int a = state.getCurrentAttack();
             int p = ctx.attack();
             if (a == 0 || p >= a) {

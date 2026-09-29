@@ -9,11 +9,13 @@ import com.cardbattle.engine.card.Timing;
 import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
 import com.cardbattle.engine.state.CurseState;
+import com.cardbattle.engine.state.FieldCard;
 import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
 import com.cardbattle.engine.state.StatusState;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,7 +31,13 @@ public final class TurnContext {
     private final CardPack pack;
     private final PlayerState actor;
     private final CardDefinition card;
-    private final int attack;
+    private int attack;
+    /** 누적 판정에서 공격 카드로 볼 것인가. null이면 낸 카드가 공격 카드인지로 정한다 */
+    private Boolean attackCounts;
+    /** 이 카드가 요청한 추가 제출 (EXTRA_PLAY) */
+    private EffectSpec extraRequest;
+    /** 전군 돌격처럼 함께 필드에 놓일 카드 */
+    private final List<FieldCard> extraFieldCards = new ArrayList<>();
     private final PlayerState chosenTarget;
     private final EventSink events;
 
@@ -93,6 +101,34 @@ public final class TurnContext {
 
     public int attack() {
         return attack;
+    }
+
+    public void setAttack(int attack) {
+        this.attack = attack;
+    }
+
+    public boolean attackCounts() {
+        return attackCounts != null ? attackCounts : card != null && card.attackCard();
+    }
+
+    public void setAttackCounts(boolean attackCounts) {
+        this.attackCounts = attackCounts;
+    }
+
+    public EffectSpec extraRequest() {
+        return extraRequest;
+    }
+
+    public void requestExtraPlay(EffectSpec spec) {
+        this.extraRequest = spec;
+    }
+
+    public List<FieldCard> extraFieldCards() {
+        return extraFieldCards;
+    }
+
+    public void addFieldCard(FieldCard card) {
+        extraFieldCards.add(card);
     }
 
     public PlayerState chosenTarget() {

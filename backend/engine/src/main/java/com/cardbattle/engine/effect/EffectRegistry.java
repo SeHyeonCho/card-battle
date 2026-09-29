@@ -57,6 +57,9 @@ public final class EffectRegistry {
                 new ReflectCurseEffect(),
                 new ApplyStatusEffect(),
                 new DispelStatusesEffect(),
+                // 추가 제출
+                new ExtraPlayEffect(),
+                new PlayAllEffect(),
                 // 필드·흐름
                 new FieldLockEffect(),
                 new SkipNextEffect(),

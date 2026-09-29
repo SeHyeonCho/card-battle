@@ -2,6 +2,7 @@ package com.cardbattle.engine.view;
 
 import com.cardbattle.engine.GameSettings;
 import com.cardbattle.engine.card.CardInstance;
+import com.cardbattle.engine.state.ExtraPlayState;
 import com.cardbattle.engine.state.FieldCard;
 import com.cardbattle.engine.state.FieldLock;
 import com.cardbattle.engine.state.GameStatus;
@@ -28,6 +29,7 @@ public record GameSnapshot(
         List<FieldLock> fieldLocks,
         TimeBomb timeBomb,
         Integer drawCountdown,
+        ExtraPlayState extraPlay,
         List<PlayerView> players,
         String viewerId,
         List<CardInstance> myHand,
