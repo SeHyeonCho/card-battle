@@ -2,7 +2,7 @@ import { create } from 'zustand'
 import { api } from '../api/http'
 import { sfx } from '../audio/sfx'
 import { fromSnapshot, logFromHistory, reduce, type Fx, type GameView } from '../game/reduce'
-import { send, subscribeGame, subscribeRoom, unsubscribeGame, type RoomMessage } from '../net/connection'
+import { send, subscribeGame, subscribeRoom, unsubscribeGame, unsubscribeRoom, type RoomMessage } from '../net/connection'
 import type { GameSnapshot, Room, ServerMessage, Session } from '../types'
 import { readStorage, writeStorage } from '../util'
 
@@ -147,7 +147,16 @@ export const useApp = create<AppState>((set, get) => {
         return
       }
       const room = message.room
-      const { game } = get()
+      const { game, session } = get()
+      if (session && !room.members.some((m) => m.playerId === session.playerId)) {
+        // 방장이 강퇴함 → 처음 화면으로
+        unsubscribeGame()
+        unsubscribeRoom()
+        writeStorage(INVITE_KEY, null)
+        set({ screen: 'home', room: null, game: null, log: [] })
+        get().toast('방장이 자리 비움으로 강퇴했습니다')
+        return
+      }
       set({ room })
       if (room.status === 'IN_GAME' && room.gameId && game?.gameId !== room.gameId) {
         set({ game: null, log: [], floaters: [], shakes: {} })

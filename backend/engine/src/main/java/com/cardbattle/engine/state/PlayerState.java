@@ -1,5 +1,6 @@
 package com.cardbattle.engine.state;
 
+import com.cardbattle.engine.GameSettings;
 import com.cardbattle.engine.card.CardInstance;
 
 import java.util.ArrayList;
@@ -22,7 +23,7 @@ public class PlayerState {
     private boolean eliminated;
     /** 탈락한 턴 번호. 순위 계산용 (생존 중이면 0) */
     private int eliminatedAtTurn;
-    /** 연속 시간 초과 횟수 (자리 비움 판정용, P1) */
+    /** 연속 시간 초과 횟수 (자리 비움 판정용, PRD 4.3) */
     private int consecutiveTimeouts;
     /** 걸린 저주. 없으면 null (최대 1개, PRD 7.8) */
     private CurseState curse;
@@ -52,6 +53,11 @@ public class PlayerState {
 
     public boolean alive() {
         return !eliminated;
+    }
+
+    /** 자리 비움: 살아 있고 연속 시간 초과가 기준 이상 */
+    public boolean away() {
+        return !eliminated && consecutiveTimeouts >= GameSettings.AWAY_AFTER_TIMEOUTS;
     }
 
     public boolean cursed() {

@@ -138,6 +138,27 @@ public class GameService {
         });
     }
 
+    /**
+     * 자리 비움인 플레이어를 강퇴한다 (방장 확인은 RoomService가 한다). 거절되면 요청한 사람에게 알린다.
+     *
+     * @return 강퇴됐으면 true
+     */
+    public boolean kick(String gameId, String requesterId, String targetId) {
+        boolean[] kicked = {false};
+        withLock(gameId, () -> {
+            Optional<GameState> loaded = games.load(gameId);
+            if (loaded.isEmpty()) {
+                publisher.reject(gameId, requesterId, "GAME_NOT_FOUND", null, "게임을 찾을 수 없습니다");
+                return;
+            }
+            GameState state = loaded.get();
+            long before = state.getVersion();
+            ActionResult result = engineFor(state).kick(state, targetId);
+            kicked[0] = commit(gameId, requesterId, before, state, result);
+        });
+        return kicked[0];
+    }
+
     // ------------------------------------------------------------------
 
     private void act(String gameId, String playerId, EngineAction action) {
@@ -154,20 +175,21 @@ public class GameService {
         });
     }
 
-    private void commit(String gameId, String playerId, long versionBefore, GameState state, ActionResult result) {
+    /** @return 저장하고 이벤트를 보냈으면 true */
+    private boolean commit(String gameId, String playerId, long versionBefore, GameState state, ActionResult result) {
         if (!result.accepted()) {
             if (playerId != null) {
                 Rejection r = result.rejection();
                 publisher.reject(gameId, playerId, r.code().name(), r.reason() == null ? null : r.reason().name(),
                         r.message());
             }
-            return;
+            return false;
         }
         if (!games.saveIfVersion(state, versionBefore)) {
             if (playerId != null) {
                 publisher.reject(gameId, playerId, "STALE_VERSION", null, "다른 행동이 먼저 처리됐습니다. 다시 불러옵니다");
             }
-            return;
+            return false;
         }
         games.appendEvents(gameId, result.events());
         publisher.publish(gameId, result.events());
@@ -175,6 +197,7 @@ public class GameService {
         if (!state.inProgress()) {
             appEvents.publishEvent(new GameFinishedEvent(games.roomOf(gameId), gameId));
         }
+        return true;
     }
 
     /** 초당 행동 수 제한 + 같은 actionId 재전송 무시 (PRD 9.5, 11장) */

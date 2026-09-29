@@ -173,6 +173,57 @@ public final class TurnResolver {
         startTurn(state, events);
     }
 
+    // ------------------------------------------------------------------
+    // 강퇴 (PRD 4.3, FR-GAME-07)
+    // ------------------------------------------------------------------
+
+    /**
+     * 플레이어를 그 자리에서 탈락시킨다. 체력은 그대로 두고 손패는 버린다.
+     * 그 사람의 차례였다면 차례가 끝난다: 추가 제출은 취소되고, 받을 사람이 없는 누적은 사라진다(체인 종료).
+     * 필드는 바뀌지 않고, 카운트다운도 줄지 않는다 (정상적인 턴 종료가 아니므로).
+     */
+    public void forfeit(GameState state, PlayerState player, EventSink events) {
+        boolean wasCurrent = player == state.currentPlayer();
+        TurnContext ctx = new TurnContext(state, pack, player, null, 0, null, events);
+
+        player.setEliminated(true);
+        player.setEliminatedAtTurn(state.getTurnNumber());
+        player.getHand().clear();
+        events.toAll(EventType.PLAYER_ELIMINATED, payload(
+                "playerId", player.getPlayerId(), "turnNumber", state.getTurnNumber(), "reason", "KICKED"));
+        events.toPlayer(player.getPlayerId(), EventType.HAND_UPDATED, payload("hand", List.of()));
+        events.toAll(EventType.HAND_COUNT_CHANGED, payload("playerId", player.getPlayerId(), "count", 0));
+        // 탈락과 같이, 이 사람이 건 저주는 풀리고 걸어 둔 차례 잠금도 없어진다
+        for (PlayerState p : state.alivePlayers()) {
+            if (p.cursed() && player.getPlayerId().equals(p.getCurse().getCasterId())) {
+                ctx.removeCurse(p, "CASTER_ELIMINATED");
+            }
+        }
+        if (player.getPlayerId().equals(state.getLockedPlayerId())) {
+            state.setLockedPlayerId(null);
+        }
+
+        if (wasCurrent) {
+            state.setExtraPlay(null);
+            ctx.setChain(0, 0);
+            events.toAll(EventType.TURN_ENDED,
+                    payload("playerId", player.getPlayerId(), "turnNumber", state.getTurnNumber()));
+        }
+        if (finishIfOver(state, events)) {
+            return;
+        }
+        if (wasCurrent) {
+            PlayerState next = nextPlayer(state, events);
+            state.setCurrentSeat(next.getSeat());
+            startTurn(state, events);
+        } else {
+            // 고를 수 있는 대상이 줄었으니 지금 차례인 사람의 제출 가능 여부를 다시 보낸다
+            PlayerState current = state.currentPlayer();
+            events.toPlayer(current.getPlayerId(), EventType.PLAYABILITY_UPDATED,
+                    payload("cards", playabilityOf(state, current)));
+        }
+    }
+
     /** 교차로(강제 지정) → 방향대로 다음 생존자 → 점프 횟수만큼 건너뛰기 */
     private static PlayerState nextPlayer(GameState state, EventSink events) {
         PlayerState forced = state.getForcedNextPlayerId() == null ? null : state.player(state.getForcedNextPlayerId());

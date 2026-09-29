@@ -51,6 +51,12 @@ export function startGame() {
   if (room) send(`/app/rooms/${room.roomId}/start`, {})
 }
 
+/** 방장: 자리 비움인 참가자 강퇴 (PRD 4.3) */
+export function kickPlayer(playerId: string) {
+  const room = useApp.getState().room
+  if (room) send(`/app/rooms/${room.roomId}/kick`, { playerId })
+}
+
 export function leaveRoom() {
   const room = useApp.getState().room
   if (room) send(`/app/rooms/${room.roomId}/leave`, {})

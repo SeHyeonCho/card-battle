@@ -10,6 +10,8 @@ public record GameSettings(int startingHp, int hpCap, int handSize, int turnTime
 
     public static final int MIN_PLAYERS = 2;
     public static final int MAX_PLAYERS = 6;
+    /** 이만큼 연속으로 시간 초과하면 "자리 비움"이 되고, 방장이 강퇴할 수 있다 (PRD 4.3) */
+    public static final int AWAY_AFTER_TIMEOUTS = 3;
 
     public GameSettings {
         if (ruleMode == null || ruleMode.isBlank()) {

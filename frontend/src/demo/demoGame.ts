@@ -50,6 +50,7 @@ export function createDemo(emit: (message: ServerMessage) => void) {
     curse: null,
     statuses: [],
     revealedHand: null,
+    away: false,
     hand: [],
   }))
   const draw = (): CardInstance => ({ instanceId: `d${++counter}`, cardId: CARDS[Math.floor(Math.random() * CARDS.length)].id })

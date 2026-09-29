@@ -142,6 +142,34 @@ public class RoomService {
         });
     }
 
+    /**
+     * 방장이 자리 비움(연속 시간 초과)인 참가자를 강퇴한다 (PRD 4.3, FR-GAME-07).
+     * 게임에서는 탈락 처리되고 방에서도 빠진다. 강퇴된 사람의 화면은 멤버 목록에서 자신이 빠진 것을 보고 처음 화면으로 간다.
+     */
+    public void kick(String roomId, String hostId, String targetId) {
+        Room room = requireRoom(roomId);
+        if (!room.hostedBy(hostId)) {
+            throw ApiException.forbidden("NOT_HOST", "방장만 강퇴할 수 있습니다");
+        }
+        if (targetId == null || targetId.equals(hostId)) {
+            throw ApiException.badRequest("INVALID_TARGET", "자기 자신은 강퇴할 수 없습니다");
+        }
+        requireMember(room, targetId);
+        if (room.getStatus() != RoomStatus.IN_GAME || room.getGameId() == null) {
+            throw ApiException.conflict("NOT_IN_GAME", "게임 중 자리 비움인 참가자만 강퇴할 수 있습니다");
+        }
+        // 방 락을 잡기 전에 게임을 처리한다. 강퇴로 게임이 끝나면 onGameFinished가 방 락을 잡는데,
+        // 행동 처리(게임 락 → 방 락)와 반대 순서로 락을 잡으면 교착될 수 있다
+        if (!games.kick(room.getGameId(), hostId, targetId)) {
+            return; // 거절 사유는 GameService가 방장에게 보냈다
+        }
+        withLock(roomId, () -> rooms.find(roomId).ifPresent(fresh -> {
+            fresh.getMembers().removeIf(m -> m.getPlayerId().equals(targetId));
+            rooms.save(fresh);
+            broadcast(fresh);
+        }));
+    }
+
     /** 게임이 끝나면 같은 멤버로 대기실에 돌아온다 (FR-ROOM-06) */
     @EventListener
     public void onGameFinished(GameFinishedEvent event) {

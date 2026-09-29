@@ -61,6 +61,8 @@ export interface PlayerView {
   statuses: StatusView[]
   /** "지켜보고 있다" 저주로 공개된 손패. 공개되지 않았으면 null */
   revealedHand: CardInstance[] | null
+  /** 자리 비움 (3번 연속 시간 초과). 방장이 강퇴할 수 있다 */
+  away: boolean
 }
 
 /** engine/state/FieldLock — 필드 카드가 거는 제출 제한 */

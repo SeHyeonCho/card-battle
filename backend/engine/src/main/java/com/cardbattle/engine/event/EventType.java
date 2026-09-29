@@ -34,6 +34,8 @@ public enum EventType {
     /** 블랙홀: 카드가 게임에서 제외됨 */
     CARDS_BANNED,
     PLAYER_ELIMINATED,
+    /** 자리 비움 표시가 켜지거나 꺼짐 (연속 시간 초과, PRD 4.3) */
+    PLAYER_AWAY_CHANGED,
     TURN_ENDED,
     GAME_ENDED,
     // 개인 이벤트

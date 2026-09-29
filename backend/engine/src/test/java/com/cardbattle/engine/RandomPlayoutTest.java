@@ -32,12 +32,13 @@ class RandomPlayoutTest {
     private static final int MAX_ACTIONS = 3000;
 
     @Test
-    @DisplayName("무작위 300판: 예외 없음, 불변 조건 유지, 대부분 정상 종료")
+    @DisplayName("무작위 300판: 예외 없음, 불변 조건 유지, 대부분 정상 종료 (자리 비움·강퇴 포함)")
     void randomGamesKeepInvariants() {
         CardPack pack = TestCards.standardPack();
         GameEngine engine = new GameEngine(pack, EffectRegistry.defaults(), TestGame.CLOCK);
         Random random = new Random(20260929L);
         int finished = 0;
+        int kicks = 0;
 
         for (int game = 0; game < GAMES; game++) {
             int playerCount = 2 + random.nextInt(5);
@@ -47,11 +48,21 @@ class RandomPlayoutTest {
             }
             GameState state = engine.start("g" + game, GameSettings.defaults(), seeds, random.nextLong()).state();
             long lastSeq = state.getNextSeq() - 1;
+            // 세 판에 한 판은 한 명이 계속 시간 초과한다 (자리 비움 → 강퇴 경로 검증)
+            String afk = random.nextInt(3) == 0 ? seeds.get(random.nextInt(playerCount)).playerId() : null;
 
             for (int action = 0; action < MAX_ACTIONS && state.inProgress(); action++) {
                 assertInvariants(state, pack);
                 long versionBefore = state.getVersion();
-                ActionResult result = randomAction(engine, pack, state, random);
+                PlayerState away = state.alivePlayers().stream().filter(PlayerState::away).findFirst().orElse(null);
+                ActionResult result = away != null && random.nextInt(4) == 0
+                        ? engine.kick(state, away.getPlayerId())
+                        : state.currentPlayer().getPlayerId().equals(afk)
+                        ? engine.timeout(state)
+                        : randomAction(engine, pack, state, random);
+                if (away != null && result.accepted() && !away.alive()) {
+                    kicks++;
+                }
                 if (!result.accepted()) {
                     fail("무작위 행동이 거절됨: " + result.rejection());
                 }
@@ -67,6 +78,7 @@ class RandomPlayoutTest {
             }
         }
         assertTrue(finished >= GAMES * 0.95, "정상 종료 " + finished + " / " + GAMES);
+        assertTrue(kicks > 0, "강퇴가 한 번도 일어나지 않음");
     }
 
     private static ActionResult randomAction(GameEngine engine, CardPack pack, GameState state, Random random) {

@@ -11,5 +11,7 @@ public enum RejectCode {
     INVALID_TARGET,
     STALE_VERSION,
     GAME_FINISHED,
-    PLAYER_NOT_FOUND
+    PLAYER_NOT_FOUND,
+    /** 자리 비움 상태가 아닌 플레이어는 강퇴할 수 없다 */
+    PLAYER_NOT_AWAY
 }

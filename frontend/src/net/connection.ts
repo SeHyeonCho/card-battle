@@ -71,6 +71,11 @@ export function subscribeRoom(roomId: string) {
   }
 }
 
+export function unsubscribeRoom() {
+  subs.room?.sub?.unsubscribe()
+  subs.room = undefined
+}
+
 /** 게임 구독 후 바로 스냅샷을 요청한다 (새로고침·재접속 복구) */
 export function subscribeGame(gameId: string) {
   subs.game?.subs.forEach((s) => s.unsubscribe())

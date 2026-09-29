@@ -162,7 +162,8 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
     case 'CARD_DISCARDED':
     case 'TURN_TIMED_OUT': {
       next = { ...next, myHand: next.myHand.filter((c) => c.instanceId !== str(p.instanceId)), playability: {} }
-      fx.push({ kind: 'log', text: `${nick(p.playerId)}: ${msg.type === 'TURN_TIMED_OUT' ? '시간 초과' : '카드 버림'}` })
+      const streak = num(p.consecutiveTimeouts) >= 2 ? ` (${num(p.consecutiveTimeouts)}번 연속)` : ''
+      fx.push({ kind: 'log', text: `${nick(p.playerId)}: ${msg.type === 'TURN_TIMED_OUT' ? `시간 초과${streak}` : '카드 버림'}` })
       break
     }
     case 'ACCUMULATION_CHANGED':
@@ -202,8 +203,18 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
     }
     case 'PLAYER_ELIMINATED': {
       const playerId = str(p.playerId)
-      next = { ...next, players: next.players.map((pl) => (pl.playerId === playerId ? { ...pl, eliminated: true, handCount: 0 } : pl)) }
-      fx.push({ kind: 'sound', name: 'eliminate' }, { kind: 'log', text: `💀 ${nick(playerId)} 탈락` })
+      next = {
+        ...next,
+        players: next.players.map((pl) => (pl.playerId === playerId ? { ...pl, eliminated: true, away: false, handCount: 0 } : pl)),
+      }
+      const text = p.reason === 'KICKED' ? `🚪 ${nick(playerId)} 강퇴 (탈락)` : `💀 ${nick(playerId)} 탈락`
+      fx.push({ kind: 'sound', name: 'eliminate' }, { kind: 'log', text })
+      break
+    }
+    case 'PLAYER_AWAY_CHANGED': {
+      const away = p.away === true
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, away })) }
+      fx.push({ kind: 'log', text: away ? `💤 ${nick(p.playerId)} 자리 비움 (연속 시간 초과)` : `👋 ${nick(p.playerId)} 돌아옴` })
       break
     }
     case 'GAME_ENDED': {

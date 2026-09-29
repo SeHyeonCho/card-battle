@@ -21,6 +21,9 @@ public class RoomMessageController {
     public record ReadyRequest(Boolean ready) {
     }
 
+    public record KickRequest(String playerId) {
+    }
+
     private final RoomService rooms;
 
     public RoomMessageController(RoomService rooms) {
@@ -40,6 +43,11 @@ public class RoomMessageController {
     @MessageMapping("/rooms/{roomId}/leave")
     public void leave(@DestinationVariable String roomId, Principal principal) {
         rooms.leave(roomId, principal.getName());
+    }
+
+    @MessageMapping("/rooms/{roomId}/kick")
+    public void kick(@DestinationVariable String roomId, @Payload KickRequest request, Principal principal) {
+        rooms.kick(roomId, principal.getName(), request.playerId());
     }
 
     @MessageExceptionHandler(ApiException.class)

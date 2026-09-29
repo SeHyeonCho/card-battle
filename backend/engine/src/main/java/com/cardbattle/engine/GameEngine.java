@@ -148,7 +148,7 @@ public final class GameEngine {
                 : forcedSelf ? actor : state.player(cmd.targetId());
 
         EventSink events = new EventSink(state);
-        actor.setConsecutiveTimeouts(0);
+        markActive(actor, events);
 
         // 코스모의 강화기 저주: 일정 확률로 카드 내기가 버리기로 바뀐다
         Map<?, ?> fumble = Passives.find(actor, Passives.PLAY_BECOMES_DISCARD);
@@ -286,8 +286,17 @@ public final class GameEngine {
         if (inst == null) {
             return ActionResult.rejected(Rejection.of(RejectCode.CARD_NOT_IN_HAND, "손패에 없는 카드입니다"));
         }
+        EventSink events = new EventSink(state);
+        markActive(actor, events);
+        return discardInstance(state, actor, inst, events);
+    }
+
+    /** 직접 행동했으니 연속 시간 초과를 초기화한다. 자리 비움이었다면 표시를 끈다 */
+    private static void markActive(PlayerState actor, EventSink events) {
+        if (actor.away()) {
+            events.toAll(EventType.PLAYER_AWAY_CHANGED, payload("playerId", actor.getPlayerId(), "away", false));
+        }
         actor.setConsecutiveTimeouts(0);
-        return discardInstance(state, actor, inst, new EventSink(state));
     }
 
     private ActionResult discardInstance(GameState state, PlayerState actor, CardInstance inst, EventSink events) {
@@ -339,7 +348,31 @@ public final class GameEngine {
         events.toAll(EventType.TURN_TIMED_OUT, payload(
                 "playerId", actor.getPlayerId(), "cardId", cardId, "instanceId", instanceId,
                 "consecutiveTimeouts", actor.getConsecutiveTimeouts()));
+        if (actor.getConsecutiveTimeouts() == GameSettings.AWAY_AFTER_TIMEOUTS) {
+            events.toAll(EventType.PLAYER_AWAY_CHANGED, payload("playerId", actor.getPlayerId(), "away", true));
+        }
         return endWithoutPlay(state, actor, events);
+    }
+
+    // ------------------------------------------------------------------
+    // 강퇴 — 자리 비움인 플레이어만 (PRD 4.3, FR-GAME-07). 누가 방장인지는 서버가 확인한다
+    // ------------------------------------------------------------------
+
+    public ActionResult kick(GameState state, String playerId) {
+        if (!state.inProgress()) {
+            return ActionResult.rejected(Rejection.of(RejectCode.GAME_FINISHED, "이미 끝난 게임입니다"));
+        }
+        PlayerState target = state.player(playerId);
+        if (target == null || !target.alive()) {
+            return ActionResult.rejected(Rejection.of(RejectCode.PLAYER_NOT_FOUND, "게임 중인 플레이어가 아닙니다"));
+        }
+        if (!target.away()) {
+            return ActionResult.rejected(Rejection.of(RejectCode.PLAYER_NOT_AWAY,
+                    "자리 비움(" + GameSettings.AWAY_AFTER_TIMEOUTS + "번 연속 시간 초과)인 플레이어만 강퇴할 수 있습니다"));
+        }
+        EventSink events = new EventSink(state);
+        resolver.forfeit(state, target, events);
+        return ActionResult.accepted(events.commit());
     }
 
     // ------------------------------------------------------------------
@@ -403,7 +436,8 @@ public final class GameEngine {
                         p.cursed() ? new PlayerView.Curse(p.getCurse().getCardId(), p.getCurse().getCasterId()) : null,
                         p.getStatuses().stream().map(st -> new PlayerView.Status(st.getStatus(), st.getTurnsLeft()))
                                 .toList(),
-                        Passives.has(p, Passives.REVEAL_HAND) ? List.copyOf(p.getHand()) : null))
+                        Passives.has(p, Passives.REVEAL_HAND) ? List.copyOf(p.getHand()) : null,
+                        p.away()))
                 .toList();
     }
 

@@ -7,7 +7,7 @@ import { GameLog } from '../components/GameLog'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Seat } from '../components/Seat'
 import { TurnTimer } from '../components/TurnTimer'
-import { discardCard, playCard } from '../game/actions'
+import { discardCard, kickPlayer, playCard } from '../game/actions'
 import { describeFilter, EXTRA_MODE_TEXT } from '../game/describe'
 import { useApp } from '../store/app'
 import type { CardInfo, CardInstance } from '../types'
@@ -27,6 +27,8 @@ export function GameScreen() {
   const connected = useApp((s) => s.connected)
   const demo = useApp((s) => s.demo)
   const backToRoom = useApp((s) => s.backToRoom)
+  const room = useApp((s) => s.room)
+  const session = useApp((s) => s.session)
   const [discardMode, setDiscardMode] = useState(false)
   const [targeting, setTargeting] = useState<{ instance: CardInstance; card: CardInfo } | null>(null)
   const [muted, setMuted] = useState(sfx.muted())
@@ -72,6 +74,13 @@ export function GameScreen() {
   // 천상의 보호막이 있는 다른 사람은 고를 수 없다 (서버도 거절한다)
   const shielded = (playerId: string) =>
     playerId !== game.viewerId && (game.players.find((p) => p.playerId === playerId)?.statuses ?? []).some((st) => st.status === 'UNTARGETABLE')
+  // 방장은 자리 비움(연속 시간 초과)인 참가자를 강퇴할 수 있다 (PRD 4.3)
+  const isHost = !demo && room !== null && session !== null && room.hostId === session.playerId
+  const kick = (playerId: string) => {
+    if (window.confirm(`${nickOf(playerId)}님을 강퇴할까요? 강퇴하면 탈락 처리되고 방에서도 나가게 됩니다.`)) {
+      kickPlayer(playerId)
+    }
+  }
   const canTarget = (playerId: string, eliminated: boolean) =>
     targeting !== null &&
     !eliminated &&
@@ -113,20 +122,26 @@ export function GameScreen() {
         <section className="flex flex-col items-center gap-6 overflow-y-auto">
           <div className="flex flex-wrap justify-center gap-3">
             {others.map((p) => (
-              <Seat
-                key={p.playerId}
-                player={p}
-                baseHp={game.settings.startingHp}
-                isCurrent={p.playerId === game.currentPlayerId}
-                isMe={false}
-                floaters={floaters.filter((f) => f.playerId === p.playerId)}
-                shake={shakes[p.playerId] ?? 0}
-                targetable={canTarget(p.playerId, p.eliminated)}
-                onClick={() => onSeatClick(p.playerId)}
-                defaultHandLimit={game.settings.handSize}
-                cardName={cardName}
-                nickOf={nickOf}
-              />
+              <div key={p.playerId} className="flex flex-col items-center gap-1">
+                <Seat
+                  player={p}
+                  baseHp={game.settings.startingHp}
+                  isCurrent={p.playerId === game.currentPlayerId}
+                  isMe={false}
+                  floaters={floaters.filter((f) => f.playerId === p.playerId)}
+                  shake={shakes[p.playerId] ?? 0}
+                  targetable={canTarget(p.playerId, p.eliminated)}
+                  onClick={() => onSeatClick(p.playerId)}
+                  defaultHandLimit={game.settings.handSize}
+                  cardName={cardName}
+                  nickOf={nickOf}
+                />
+                {isHost && p.away && !p.eliminated && game.status === 'IN_PROGRESS' && (
+                  <button type="button" onClick={() => kick(p.playerId)} className="rounded bg-rose-800 px-2 py-0.5 text-xs text-rose-50 hover:bg-rose-700">
+                    강퇴
+                  </button>
+                )}
+              </div>
             ))}
           </div>
 

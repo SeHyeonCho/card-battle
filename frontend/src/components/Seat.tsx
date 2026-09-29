@@ -48,6 +48,7 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-semibold">
           {player.eliminated && '💀 '}
+          {player.away && !player.eliminated && <span title="자리 비움 (연속 시간 초과)">💤 </span>}
           {player.nickname}
           {isMe && <span className="ml-1 text-xs text-sky-300">(나)</span>}
         </span>
@@ -64,6 +65,10 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
         <span className="ml-1 text-xs text-slate-500">HP</span>
         {player.hpCap < baseHp && <span className="ml-1 text-[10px] text-rose-300">(최대 {player.hpCap})</span>}
       </div>
+
+      {player.away && !player.eliminated && (
+        <div className="mt-1 rounded bg-slate-700/80 px-1.5 py-0.5 text-center text-[11px] text-slate-200">💤 자리 비움</div>
+      )}
 
       {(player.curse || player.statuses.length > 0) && (
         <div className="mt-1 flex flex-wrap gap-1 text-[11px]">
