@@ -54,6 +54,10 @@ final class TestGame {
         return new TestGame(TestCards.standardPack(), playerIds);
     }
 
+    static TestGame with(CardPack pack, String... playerIds) {
+        return new TestGame(pack, playerIds);
+    }
+
     PlayerState p(String playerId) {
         return state.player(playerId);
     }

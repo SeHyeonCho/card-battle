@@ -4,8 +4,12 @@ import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
 import com.cardbattle.engine.result.PlayBlockReason;
 import com.cardbattle.engine.result.Playability;
+import com.cardbattle.engine.state.FieldLock;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * 카드 제출 가능 여부 판정 (PRD 7.3의 3~7단계).
@@ -13,9 +17,11 @@ import com.cardbattle.engine.state.PlayerState;
  */
 public final class PlayabilityChecker {
 
+    private final CardPack pack;
     private final ConditionEvaluator conditions;
 
     public PlayabilityChecker(CardPack pack) {
+        this.pack = pack;
         this.conditions = new ConditionEvaluator(pack);
     }
 
@@ -25,8 +31,17 @@ public final class PlayabilityChecker {
      */
     public Playability check(GameState state, PlayerState player, CardDefinition card, String targetId) {
         if (!card.alwaysPlayable()) {
-            // 4. 필드 락 — Phase 2 (FIELD_LOCK 효과)에서 구현
-            // 5. 저주 락 — Phase 2 (APPLY_CURSE 효과)에서 구현
+            // 4. 필드 락
+            FieldLock lock = fieldLock(state, card);
+            if (lock != null) {
+                return Playability.blocked(PlayBlockReason.FIELD_LOCK,
+                        "필드의 '" + cardName(lock.getCardId()) + "' 때문에 낼 수 없습니다");
+            }
+            // 5. 저주 락
+            if (curseLocked(player, card)) {
+                return Playability.blocked(PlayBlockReason.CURSE_LOCK,
+                        "걸린 저주 '" + cardName(player.getCurse().getCardId()) + "' 때문에 낼 수 없습니다");
+            }
         }
         // 6. 제출 조건
         if (!conditions.testAll(card.conditions(), state, player)) {
@@ -51,5 +66,34 @@ public final class PlayabilityChecker {
             }
         }
         return Playability.ok();
+    }
+
+    /** 이 카드를 막는 필드 락. 없으면 null */
+    public static FieldLock fieldLock(GameState state, CardDefinition card) {
+        for (FieldLock lock : state.getFieldLocks()) {
+            if (CardFilter.matches(lock.getFilter(), card)) {
+                return lock;
+            }
+        }
+        return null;
+    }
+
+    /** 저주 정의의 locks(카드 필터 목록) 중 하나라도 맞으면 막힌다 */
+    @SuppressWarnings("unchecked")
+    public static boolean curseLocked(PlayerState player, CardDefinition card) {
+        if (!player.cursed() || !(player.getCurse().getDef().get("locks") instanceof List<?> locks)) {
+            return false;
+        }
+        for (Object f : locks) {
+            if (f instanceof Map<?, ?> filter && CardFilter.matches((Map<String, Object>) filter, card)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private String cardName(String cardId) {
+        CardDefinition def = pack.card(cardId);
+        return def == null ? cardId : def.name();
     }
 }

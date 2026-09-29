@@ -39,6 +39,11 @@ public record EffectSpec(String type, Timing timing, Map<String, Object> params)
         return Params.isInteger(params, key);
     }
 
+    /** 가공하지 않은 파라미터 값 (중첩 객체·배열용) */
+    public Object raw(String key) {
+        return params.get(key);
+    }
+
     public boolean bool(String key, boolean defaultValue) {
         return Params.bool(params, key, defaultValue);
     }

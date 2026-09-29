@@ -24,6 +24,10 @@ public class PlayerState {
     private int eliminatedAtTurn;
     /** 연속 시간 초과 횟수 (자리 비움 판정용, P1) */
     private int consecutiveTimeouts;
+    /** 걸린 저주. 없으면 null (최대 1개, PRD 7.8) */
+    private CurseState curse;
+    /** 걸린 지속 상태 */
+    private List<StatusState> statuses = new ArrayList<>();
 
     public PlayerState() {
     }
@@ -48,6 +52,19 @@ public class PlayerState {
 
     public boolean alive() {
         return !eliminated;
+    }
+
+    public boolean cursed() {
+        return curse != null;
+    }
+
+    public StatusState status(String name) {
+        for (StatusState st : statuses) {
+            if (st.getStatus().equals(name)) {
+                return st;
+            }
+        }
+        return null;
     }
 
     public String getPlayerId() {
@@ -128,5 +145,21 @@ public class PlayerState {
 
     public void setConsecutiveTimeouts(int consecutiveTimeouts) {
         this.consecutiveTimeouts = consecutiveTimeouts;
+    }
+
+    public CurseState getCurse() {
+        return curse;
+    }
+
+    public void setCurse(CurseState curse) {
+        this.curse = curse;
+    }
+
+    public List<StatusState> getStatuses() {
+        return statuses;
+    }
+
+    public void setStatuses(List<StatusState> statuses) {
+        this.statuses = statuses == null ? new ArrayList<>() : new ArrayList<>(statuses);
     }
 }

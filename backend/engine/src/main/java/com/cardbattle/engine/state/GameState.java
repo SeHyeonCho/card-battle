@@ -28,6 +28,8 @@ public class GameState {
     /** 누적 데미지 D (PRD 7.1) */
     private int accumulatedDamage;
     private List<FieldCard> field = new ArrayList<>();
+    /** 필드 카드가 건 제출 제한 (PRD 7.7) */
+    private List<FieldLock> fieldLocks = new ArrayList<>();
     /** 상태 버전. 행동이 하나 처리될 때마다 1씩 오른다 (낙관적 동시성 제어) */
     private long version;
     /** 다음 이벤트 일련번호 */
@@ -207,5 +209,13 @@ public class GameState {
 
     public void setTurnDeadlineEpochMs(long turnDeadlineEpochMs) {
         this.turnDeadlineEpochMs = turnDeadlineEpochMs;
+    }
+
+    public List<FieldLock> getFieldLocks() {
+        return fieldLocks;
+    }
+
+    public void setFieldLocks(List<FieldLock> fieldLocks) {
+        this.fieldLocks = fieldLocks == null ? new ArrayList<>() : new ArrayList<>(fieldLocks);
     }
 }

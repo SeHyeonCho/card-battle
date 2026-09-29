@@ -30,6 +30,17 @@ final class TestCards {
                 List.of(effects), id, null, 5);
     }
 
+    /** 태그·필드를 자유롭게 정하는 카드 */
+    static CardDefinition tagged(String id, CardCategory category, Integer attack, Set<String> tags,
+                                 boolean alwaysPlayable, EffectSpec... effects) {
+        return new CardDefinition(id, id, category, null, attack, null, null, tags, Targeting.NONE, alwaysPlayable,
+                List.of(), List.of(effects), id, null, 5);
+    }
+
+    static CardPack pack(CardDefinition... cards) {
+        return new CardPack("t", "테스트 팩", 1, "PUBLIC", "SC1", List.of(cards));
+    }
+
     static EffectSpec effect(String type, Object... keyValues) {
         return new EffectSpec(type, Timing.ON_PLAY, payload(keyValues));
     }

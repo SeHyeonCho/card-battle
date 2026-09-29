@@ -6,6 +6,7 @@ import com.cardbattle.engine.state.PlayerState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 대상의 체력을 회복한다 (체력 상한까지).
@@ -16,6 +17,11 @@ public final class HealEffect implements EffectHandler {
     @Override
     public String type() {
         return "HEAL";
+    }
+
+    @Override
+    public Set<String> params() {
+        return Set.of("target", "amount");
     }
 
     @Override

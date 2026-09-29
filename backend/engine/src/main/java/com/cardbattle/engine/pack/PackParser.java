@@ -136,6 +136,22 @@ public final class PackParser {
                 targeting, alwaysPlayable, conditions, effects, description, flavor, weight);
     }
 
+    /**
+     * 효과 파라미터 안에 든 조건 객체(예: {@code when})를 ConditionSpec으로 바꾼다.
+     * 형식이 틀리면 {@link PackFormatException}을 던진다. 의미 검사는 ConditionEvaluator.validate가 한다.
+     */
+    public static ConditionSpec condition(Object raw, String path) {
+        List<String> errors = new ArrayList<>();
+        ConditionSpec c = parseCondition(raw, path, errors);
+        if (c == null && errors.isEmpty()) {
+            errors.add(path + ": 조건 형식이 잘못됐습니다");
+        }
+        if (!errors.isEmpty()) {
+            throw new PackFormatException(errors);
+        }
+        return c;
+    }
+
     private static EffectSpec parseEffect(Object o, String path, List<String> errors) {
         if (!(o instanceof Map<?, ?> raw)) {
             errors.add(path + ": 객체여야 합니다");

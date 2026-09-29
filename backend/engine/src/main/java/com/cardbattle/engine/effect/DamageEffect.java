@@ -6,6 +6,7 @@ import com.cardbattle.engine.state.PlayerState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 대상의 체력을 깎는다. 반동 데미지는 target을 SELF로 쓴다.
@@ -16,6 +17,11 @@ public final class DamageEffect implements EffectHandler {
     @Override
     public String type() {
         return "DAMAGE";
+    }
+
+    @Override
+    public Set<String> params() {
+        return Set.of("target", "amount");
     }
 
     @Override

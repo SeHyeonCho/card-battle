@@ -23,6 +23,11 @@ public final class ModifyAccumulatedEffect implements EffectHandler {
     }
 
     @Override
+    public Set<String> params() {
+        return Set.of("op", "value");
+    }
+
+    @Override
     public void apply(TurnContext ctx, EffectSpec spec) {
         GameState state = ctx.state();
         int d = state.getAccumulatedDamage();

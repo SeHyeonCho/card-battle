@@ -8,6 +8,7 @@ import com.cardbattle.engine.state.PlayerState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 누적 데미지를 다른 사람에게 넘긴다 (PRD 7.4 데미지 전달).
@@ -23,6 +24,11 @@ public final class TransferAccumulatedEffect implements EffectHandler {
     @Override
     public String type() {
         return "TRANSFER_ACCUMULATED";
+    }
+
+    @Override
+    public Set<String> params() {
+        return Set.of("to", "multiplier", "immediate");
     }
 
     @Override

@@ -3,6 +3,8 @@ package com.cardbattle.engine.effect;
 import com.cardbattle.engine.card.EffectSpec;
 import com.cardbattle.engine.rules.TurnContext;
 
+import java.util.Set;
+
 /**
  * 누적 데미지를 0으로 만든다.
  * <pre>{ "type": "RESET_ACCUMULATED" }</pre>
@@ -13,6 +15,11 @@ public final class ResetAccumulatedEffect implements EffectHandler {
     @Override
     public String type() {
         return "RESET_ACCUMULATED";
+    }
+
+    @Override
+    public Set<String> params() {
+        return Set.of();
     }
 
     @Override

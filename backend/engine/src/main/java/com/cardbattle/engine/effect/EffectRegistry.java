@@ -1,6 +1,7 @@
 package com.cardbattle.engine.effect;
 
 import com.cardbattle.engine.card.EffectSpec;
+import com.cardbattle.engine.pack.PackParser;
 import com.cardbattle.engine.rules.TurnContext;
 
 import java.util.Collections;
@@ -40,11 +41,18 @@ public final class EffectRegistry {
         return Collections.unmodifiableSet(handlers.keySet());
     }
 
+    /** 모든 효과가 공통으로 받는 파라미터: 조건부 발동 */
+    public static final String WHEN = "when";
+
     public void run(TurnContext ctx, List<EffectSpec> effects) {
         for (EffectSpec spec : effects) {
             EffectHandler h = handlers.get(spec.type());
             if (h == null) {
                 throw new IllegalStateException("unsupported effect type: " + spec.type());
+            }
+            Object when = spec.raw(WHEN);
+            if (when != null && !ctx.test(PackParser.condition(when, spec.type() + "." + WHEN))) {
+                continue;
             }
             h.apply(ctx, spec);
         }

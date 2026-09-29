@@ -2,6 +2,7 @@ package com.cardbattle.engine.rules;
 
 import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
+import com.cardbattle.engine.card.ConditionSpec;
 import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
 import com.cardbattle.engine.state.GameRng;
@@ -73,6 +74,11 @@ public final class TurnContext {
 
     public List<PlayerState> resolveTargets(String target) {
         return TargetResolver.resolve(target, state, actor, chosenTarget);
+    }
+
+    /** 낸 사람 기준으로 조건을 평가한다 (효과의 when 등) */
+    public boolean test(ConditionSpec condition) {
+        return new ConditionEvaluator(pack).test(condition, state, actor);
     }
 
     public int random(int bound) {

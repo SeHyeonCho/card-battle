@@ -1,6 +1,7 @@
 package com.cardbattle.engine.rules;
 
 import com.cardbattle.engine.card.CardDefinition;
+import com.cardbattle.engine.card.CardInstance;
 import com.cardbattle.engine.card.CardPack;
 import com.cardbattle.engine.card.ConditionSpec;
 import com.cardbattle.engine.state.FieldCard;
@@ -9,17 +10,18 @@ import com.cardbattle.engine.state.PlayerState;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
  * 카드 제출 조건을 평가한다 (PRD 8.2). 조건 목록은 모두 만족(AND)해야 한다.
- * SELF_CURSED, HAND_HAS는 저주·카드 필터를 만드는 Phase 2에서 추가한다.
+ * 효과의 {@code when} 파라미터(조건부 발동)도 같은 평가기를 쓴다.
  */
 public final class ConditionEvaluator {
 
     public static final Set<String> SUPPORTED = Set.of(
             "SELF_HP_LTE", "SELF_HP_GTE", "ACCUMULATED_GTE", "ACCUMULATED_ZERO",
-            "FIELD_HAS_TAG", "FIELD_HAS_CARD", "ANY", "NOT");
+            "FIELD_HAS_TAG", "FIELD_HAS_CARD", "SELF_CURSED", "HAND_HAS", "ANY", "NOT");
 
     private final CardPack pack;
 
@@ -44,6 +46,8 @@ public final class ConditionEvaluator {
             case "ACCUMULATED_ZERO" -> state.getAccumulatedDamage() == 0;
             case "FIELD_HAS_TAG" -> fieldHasTag(state, c.str("tag"));
             case "FIELD_HAS_CARD" -> fieldHasCard(state, c.str("cardId"));
+            case "SELF_CURSED" -> self.cursed();
+            case "HAND_HAS" -> handCount(self, c.params().get("filter")) >= c.integer("count");
             case "ANY" -> c.children().stream().anyMatch(child -> test(child, state, self));
             case "NOT" -> !test(c.children().get(0), state, self);
             default -> throw new IllegalArgumentException("unknown condition: " + c.type());
@@ -58,6 +62,17 @@ public final class ConditionEvaluator {
             }
         }
         return false;
+    }
+
+    @SuppressWarnings("unchecked")
+    private int handCount(PlayerState self, Object filter) {
+        int n = 0;
+        for (CardInstance inst : self.getHand()) {
+            if (CardFilter.matches((Map<String, Object>) filter, pack.card(inst.cardId()))) {
+                n++;
+            }
+        }
+        return n;
     }
 
     private boolean fieldHasCard(GameState state, String cardId) {
@@ -86,6 +101,12 @@ public final class ConditionEvaluator {
                 String cardId = c.str("cardId");
                 if (cardId == null || pack.card(cardId) == null) {
                     errors.add(path + ".cardId: 팩에 없는 카드 '" + cardId + "'");
+                }
+            }
+            case "HAND_HAS" -> {
+                errors.addAll(CardFilter.validate(c.params().get("filter"), pack, path + ".filter"));
+                if (!c.integerParam("count") || c.integer("count") < 1) {
+                    errors.add(path + ".count: 1 이상의 정수가 필요합니다");
                 }
             }
             case "ANY" -> {

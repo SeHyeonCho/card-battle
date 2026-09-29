@@ -2,6 +2,7 @@ package com.cardbattle.engine.pack;
 
 import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
+import com.cardbattle.engine.card.ConditionSpec;
 import com.cardbattle.engine.card.EffectSpec;
 import com.cardbattle.engine.card.Timing;
 import com.cardbattle.engine.effect.EffectHandler;
@@ -108,6 +109,20 @@ public final class PackValidator {
                 errors.add(ePath + ".timing: '" + e.timing() + "' 은 아직 지원하지 않습니다");
             }
             errors.addAll(handler.validate(e, ePath));
+            for (String key : e.params().keySet()) {
+                if (!EffectRegistry.WHEN.equals(key) && !handler.params().contains(key)) {
+                    errors.add(ePath + "." + key + ": " + e.type() + " 에서 쓸 수 없는 파라미터입니다 (지원: "
+                            + handler.params() + ", when)");
+                }
+            }
+            if (e.raw(EffectRegistry.WHEN) != null) {
+                try {
+                    ConditionSpec when = PackParser.condition(e.raw(EffectRegistry.WHEN), ePath + ".when");
+                    errors.addAll(conditions.validate(when, ePath + ".when"));
+                } catch (PackFormatException ex) {
+                    errors.addAll(ex.errors());
+                }
+            }
             if ("CHOSEN".equals(e.str("target")) || "CHOSEN".equals(e.str("to"))) {
                 usesChosen = true;
             }
