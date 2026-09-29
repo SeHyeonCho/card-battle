@@ -18,13 +18,16 @@ import com.cardbattle.engine.result.Playability;
 import com.cardbattle.engine.result.RejectCode;
 import com.cardbattle.engine.result.Rejection;
 import com.cardbattle.engine.rules.ConditionEvaluator;
+import com.cardbattle.engine.rules.Passives;
 import com.cardbattle.engine.rules.PlayabilityChecker;
+import com.cardbattle.engine.rules.Statuses;
 import com.cardbattle.engine.rules.TurnContext;
 import com.cardbattle.engine.rules.TurnResolver;
 import com.cardbattle.engine.state.FieldCard;
 import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
+import com.cardbattle.engine.state.StatusState;
 import com.cardbattle.engine.view.CardView;
 import com.cardbattle.engine.view.GameSnapshot;
 import com.cardbattle.engine.view.PlayerView;
@@ -32,6 +35,7 @@ import com.cardbattle.engine.view.PlayerView;
 import java.time.Clock;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 import static com.cardbattle.engine.event.EventSink.payload;
 
@@ -129,20 +133,37 @@ public final class GameEngine {
             return ActionResult.rejected(Rejection.of(RejectCode.CARD_NOT_IN_HAND, "손패에 없는 카드입니다"));
         }
         CardDefinition card = requireCard(inst);
-        if (card.targeting().requiresChoice() && cmd.targetId() == null) {
+        // 멈춰! 저주: 대상을 고르는 카드의 대상은 항상 자기 자신
+        boolean forcedSelf = card.targeting().requiresChoice() && Passives.has(actor, Passives.FORCE_SELF_TARGET);
+        if (card.targeting().requiresChoice() && cmd.targetId() == null && !forcedSelf) {
             return ActionResult.rejected(Rejection.of(RejectCode.INVALID_TARGET, "대상을 골라야 합니다"));
         }
         Playability check = playability.check(state, actor, card, cmd.targetId());
         if (!check.playable()) {
             return ActionResult.rejected(check.toRejection());
         }
-        PlayerState chosen = card.targeting().requiresChoice() ? state.player(cmd.targetId()) : null;
+        PlayerState chosen = !card.targeting().requiresChoice() ? null
+                : forcedSelf ? actor : state.player(cmd.targetId());
 
         EventSink events = new EventSink(state);
-        actor.getHand().remove(inst);
         actor.setConsecutiveTimeouts(0);
+
+        // 코스모의 강화기 저주: 일정 확률로 카드 내기가 버리기로 바뀐다
+        Map<?, ?> fumble = Passives.find(actor, Passives.PLAY_BECOMES_DISCARD);
+        if (fumble != null && !(card.alwaysPlayable() && Boolean.TRUE.equals(fumble.get("exceptAlwaysPlayable")))
+                && GameRng.nextInt(state, 1_000_000) < Math.round(Passives.decimal(fumble, "p", 0) * 1_000_000)) {
+            events.toAll(EventType.PLAY_FUMBLED, payload(
+                    "playerId", actor.getPlayerId(), "cardId", card.id(), "instanceId", inst.instanceId()));
+            return discardInstance(state, actor, inst, events);
+        }
+
+        actor.getHand().remove(inst);
         int attack = card.attackCard() ? attackFor(state, actor, card) : 0;
         TurnContext ctx = new TurnContext(state, pack, actor, card, attack, chosen, events);
+        StatusState bonus = actor.status(Statuses.NEXT_ATTACK_BONUS);
+        if (card.attackCard() && bonus != null && bonus.getAppliedTurn() < state.getTurnNumber()) {
+            ctx.removeStatus(actor, bonus); // 스팀팩 보너스는 공격 카드 한 장에 한 번 쓰인다
+        }
 
         events.toAll(EventType.CARD_PLAYED, payload(
                 "playerId", actor.getPlayerId(),
@@ -152,7 +173,7 @@ public final class GameEngine {
                 "targetId", chosen == null ? null : chosen.getPlayerId()));
 
         // 효과와 조건은 "직전 필드"를 본다. 필드 교체는 판정 뒤에 한다 (7.7)
-        effects.run(ctx, card.effectsAt(Timing.ON_PLAY));
+        effects.run(ctx, ctx.cardEffects(Timing.ON_PLAY));
         resolver.judge(ctx);
         state.setField(List.of(new FieldCard(inst.instanceId(), card.id(), actor.getPlayerId(), attack,
                 state.getTurnNumber())));
@@ -176,9 +197,12 @@ public final class GameEngine {
         if (inst == null) {
             return ActionResult.rejected(Rejection.of(RejectCode.CARD_NOT_IN_HAND, "손패에 없는 카드입니다"));
         }
-        EventSink events = new EventSink(state);
-        actor.getHand().remove(inst);
         actor.setConsecutiveTimeouts(0);
+        return discardInstance(state, actor, inst, new EventSink(state));
+    }
+
+    private ActionResult discardInstance(GameState state, PlayerState actor, CardInstance inst, EventSink events) {
+        actor.getHand().remove(inst);
         events.toAll(EventType.CARD_DISCARDED, payload(
                 "playerId", actor.getPlayerId(), "cardId", inst.cardId(), "instanceId", inst.instanceId()));
         TurnContext ctx = new TurnContext(state, pack, actor, null, 0, null, events);
@@ -235,6 +259,7 @@ public final class GameEngine {
                 state.getCurrentAttack(),
                 state.getAccumulatedDamage(),
                 List.copyOf(state.getField()),
+                List.copyOf(state.getFieldLocks()),
                 playerViews(state),
                 viewerId,
                 myHand,
@@ -248,8 +273,12 @@ public final class GameEngine {
 
     private static List<PlayerView> playerViews(GameState state) {
         return state.getPlayers().stream()
-                .map(p -> new PlayerView(p.getPlayerId(), p.getNickname(), p.getSeat(), p.getHp(), p.getHpCap(),
-                        p.getHand().size(), p.isEliminated()))
+                .map(p -> new PlayerView(p.getPlayerId(), p.getNickname(), p.getSeat(), p.getHp(),
+                        Passives.hpCap(p), p.getHand().size(), Passives.handLimit(p), p.isEliminated(),
+                        p.cursed() ? new PlayerView.Curse(p.getCurse().getCardId(), p.getCurse().getCasterId()) : null,
+                        p.getStatuses().stream().map(st -> new PlayerView.Status(st.getStatus(), st.getTurnsLeft()))
+                                .toList(),
+                        Passives.has(p, Passives.REVEAL_HAND) ? List.copyOf(p.getHand()) : null))
                 .toList();
     }
 
@@ -291,12 +320,19 @@ public final class GameEngine {
         int attack = card.randomAttack()
                 ? GameRng.between(state, card.attackMin(), card.attackMax())
                 : card.attack();
-        ConditionEvaluator conditions = new ConditionEvaluator(pack);
-        for (EffectSpec e : card.effectsAt(Timing.ON_PLAY)) {
-            if ("CONDITIONAL_ATTACK".equals(e.type())
-                    && conditions.test(PackParser.condition(e.raw("condition"), "condition"), state, actor)) {
-                attack = ConditionalAttackEffect.adjust(attack, e);
+        if (!Passives.has(actor, Passives.STRIP_ATTACK_EFFECTS)) {
+            ConditionEvaluator conditions = new ConditionEvaluator(pack);
+            for (EffectSpec e : card.effectsAt(Timing.ON_PLAY)) {
+                if ("CONDITIONAL_ATTACK".equals(e.type())
+                        && conditions.test(PackParser.condition(e.raw("condition"), "condition"), state, actor)) {
+                    attack = ConditionalAttackEffect.adjust(attack, e);
+                }
             }
+        }
+        StatusState bonus = actor.status(Statuses.NEXT_ATTACK_BONUS);
+        if (bonus != null && bonus.getAppliedTurn() < state.getTurnNumber()
+                && bonus.getParams().get("value") instanceof Number n) {
+            attack += n.intValue();
         }
         return attack;
     }

@@ -3,6 +3,7 @@ package com.cardbattle.engine.view;
 import com.cardbattle.engine.GameSettings;
 import com.cardbattle.engine.card.CardInstance;
 import com.cardbattle.engine.state.FieldCard;
+import com.cardbattle.engine.state.FieldLock;
 import com.cardbattle.engine.state.GameStatus;
 
 import java.util.List;
@@ -23,6 +24,7 @@ public record GameSnapshot(
         int currentAttack,
         int accumulatedDamage,
         List<FieldCard> field,
+        List<FieldLock> fieldLocks,
         List<PlayerView> players,
         String viewerId,
         List<CardInstance> myHand,

@@ -13,6 +13,13 @@ public enum EventType {
     FIELD_CHANGED,
     HAND_COUNT_CHANGED,
     HAND_LIMIT_CHANGED,
+    CURSE_APPLIED,
+    CURSE_REMOVED,
+    STATUS_APPLIED,
+    STATUS_EXPIRED,
+    HAND_REVEALED,
+    /** 코스모의 강화기: 카드 내기가 버리기로 바뀜 */
+    PLAY_FUMBLED,
     PLAYER_ELIMINATED,
     TURN_ENDED,
     GAME_ENDED,

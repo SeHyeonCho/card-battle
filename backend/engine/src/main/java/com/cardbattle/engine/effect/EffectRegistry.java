@@ -47,6 +47,12 @@ public final class EffectRegistry {
                 // 공격 보정·손패
                 new ConditionalAttackEffect(),
                 new HandLimitEffect(),
+                // 저주·지속 상태
+                new ApplyCurseEffect(),
+                new RemoveCurseEffect(),
+                new ReflectCurseEffect(),
+                new ApplyStatusEffect(),
+                new DispelStatusesEffect(),
                 // 확률
                 new ChanceEffect(),
                 new RandomChoiceEffect()));

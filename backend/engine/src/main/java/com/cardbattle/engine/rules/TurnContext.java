@@ -3,13 +3,18 @@ package com.cardbattle.engine.rules;
 import com.cardbattle.engine.card.CardDefinition;
 import com.cardbattle.engine.card.CardPack;
 import com.cardbattle.engine.card.ConditionSpec;
+import com.cardbattle.engine.card.EffectSpec;
+import com.cardbattle.engine.card.Timing;
 import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
+import com.cardbattle.engine.state.CurseState;
 import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.PlayerState;
+import com.cardbattle.engine.state.StatusState;
 
 import java.util.List;
+import java.util.Map;
 
 import static com.cardbattle.engine.event.EventSink.payload;
 
@@ -27,6 +32,10 @@ public final class TurnContext {
     private final PlayerState chosenTarget;
     private final EventSink events;
 
+    /** 저주 효과를 실행하는 중이면 저주를 건 사람 (CASTER 대상), 아니면 null */
+    private PlayerState caster;
+    private boolean curseContext;
+
     private ChainOutcome outcome;
     private int restartAttack;
     private boolean immune;
@@ -41,6 +50,17 @@ public final class TurnContext {
         this.attack = attack;
         this.chosenTarget = chosenTarget;
         this.events = events;
+    }
+
+    /**
+     * 저주 효과(onTurnEnd)를 실행할 작업 공간. 행동한 사람은 저주받은 사람이고,
+     * 대상 CURSED = 저주받은 사람, CASTER = 저주를 건 사람이다. 누적 판정에는 영향을 주지 않는다.
+     */
+    public TurnContext forCurse(PlayerState cursed, PlayerState caster) {
+        TurnContext c = new TurnContext(state, pack, cursed, null, 0, null, events);
+        c.caster = caster;
+        c.curseContext = true;
+        return c;
     }
 
     public GameState state() {
@@ -73,7 +93,21 @@ public final class TurnContext {
     }
 
     public List<PlayerState> resolveTargets(String target) {
+        if ("CURSED".equals(target)) {
+            return curseContext && actor.alive() ? List.of(actor) : List.of();
+        }
+        if ("CASTER".equals(target)) {
+            return caster != null && caster.alive() ? List.of(caster) : List.of();
+        }
         return TargetResolver.resolve(target, state, actor, chosenTarget);
+    }
+
+    /** 낸 카드의 효과. 공격 카드 효과 무시 저주(적절한 카드)가 걸려 있으면 비어 있다 */
+    public List<EffectSpec> cardEffects(Timing timing) {
+        if (card == null || (card.attackCard() && Passives.has(actor, Passives.STRIP_ATTACK_EFFECTS))) {
+            return List.of();
+        }
+        return card.effectsAt(timing);
     }
 
     /** 낸 사람 기준으로 조건을 평가한다 (효과의 when 등) */
@@ -90,6 +124,10 @@ public final class TurnContext {
         if (amount <= 0 || !target.alive()) {
             return;
         }
+        if ("ACCUMULATED".equals(cause) || "TRANSFER".equals(cause) || "REDIRECT".equals(cause)) {
+            // 충격과 공포: 누적 데미지를 맞을 때 추가 피해
+            amount += Passives.number(Passives.find(target, Passives.EXTRA_RECEIVE_DAMAGE), "value", 0);
+        }
         target.setHp(target.getHp() - amount);
         events.toAll(EventType.HP_CHANGED, payload(
                 "playerId", target.getPlayerId(), "hp", target.getHp(), "delta", -amount, "cause", cause));
@@ -100,8 +138,17 @@ public final class TurnContext {
         if (amount <= 0 || !target.alive()) {
             return;
         }
+        Map<?, ?> halve = Passives.find(target, Passives.HEAL_MULTIPLIER);
+        if (halve != null && !(halve.get("exceptCategories") instanceof List<?> except
+                && card != null && except.contains(card.category().name()))) {
+            amount = (int) Math.floor(amount * Passives.decimal(halve, "value", 1.0));
+        }
         int before = target.getHp();
-        int after = Math.min(target.getHpCap(), before + amount);
+        int cap = Passives.hpCap(target);
+        if (amount <= 0 || before >= cap) {
+            return; // 상한을 이미 넘었으면 회복으로 체력이 줄지 않게 한다 (초과분은 정산 6단계에서 정리)
+        }
+        int after = Math.min(cap, before + amount);
         if (after == before) {
             return;
         }
@@ -116,7 +163,7 @@ public final class TurnContext {
             return;
         }
         int before = target.getHp();
-        int after = Math.min(target.getHpCap(), value);
+        int after = Math.min(Passives.hpCap(target), value);
         if (after == before) {
             return;
         }
@@ -133,6 +180,45 @@ public final class TurnContext {
         }
         target.setHandLimit(next);
         events.toAll(EventType.HAND_LIMIT_CHANGED, payload("playerId", target.getPlayerId(), "handLimit", next));
+    }
+
+    /** 저주를 건다. 이미 있으면 덮어쓴다 (PRD 7.8) */
+    public void applyCurse(PlayerState target, CurseState curse) {
+        if (!target.alive()) {
+            return;
+        }
+        target.setCurse(curse);
+        events.toAll(EventType.CURSE_APPLIED, payload(
+                "playerId", target.getPlayerId(), "curseId", curse.getCurseId(),
+                "cardId", curse.getCardId(), "casterId", curse.getCasterId()));
+    }
+
+    public void removeCurse(PlayerState target, String reason) {
+        if (!target.cursed()) {
+            return;
+        }
+        String cardId = target.getCurse().getCardId();
+        target.setCurse(null);
+        events.toAll(EventType.CURSE_REMOVED, payload("playerId", target.getPlayerId(), "cardId", cardId,
+                "reason", reason));
+    }
+
+    /** 지속 상태를 건다. 같은 상태가 있으면 새로 건 것으로 바꾼다 */
+    public void applyStatus(PlayerState target, String status, int turns, Map<String, Object> params) {
+        if (!target.alive()) {
+            return;
+        }
+        target.getStatuses().removeIf(st -> st.getStatus().equals(status));
+        target.getStatuses().add(new StatusState(status, turns, actor.getPlayerId(), params, state.getTurnNumber()));
+        events.toAll(EventType.STATUS_APPLIED, payload(
+                "playerId", target.getPlayerId(), "status", status, "turns", turns));
+    }
+
+    public void removeStatus(PlayerState target, StatusState status) {
+        if (target.getStatuses().remove(status)) {
+            events.toAll(EventType.STATUS_EXPIRED, payload("playerId", target.getPlayerId(),
+                    "status", status.getStatus()));
+        }
     }
 
     /** 현재 공격력과 누적 데미지를 바꾸고 이벤트를 남긴다 */

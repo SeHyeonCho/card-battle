@@ -7,11 +7,13 @@ import com.cardbattle.engine.card.Timing;
 import com.cardbattle.engine.effect.EffectRegistry;
 import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
+import com.cardbattle.engine.pack.PackParser;
 import com.cardbattle.engine.result.Playability;
 import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.GameStatus;
 import com.cardbattle.engine.state.PlayerState;
+import com.cardbattle.engine.state.StatusState;
 import com.cardbattle.engine.view.CardPlayabilityView;
 
 import java.time.Clock;
@@ -79,7 +81,12 @@ public final class TurnResolver {
         if (ctx.outcome().receives()) {
             int d = state.getAccumulatedDamage();
             if (!ctx.immune() && d > 0) {
-                ctx.damage(actor, d, "ACCUMULATED");
+                PlayerState shield = redirectTarget(state, ctx);
+                if (shield != null) {
+                    ctx.damage(shield, d, "REDIRECT");
+                } else {
+                    ctx.damage(actor, d, "ACCUMULATED");
+                }
                 ctx.markReceived();
             }
             if (ctx.outcome() == ChainOutcome.RECEIVE_AND_RESTART) {
@@ -90,26 +97,51 @@ public final class TurnResolver {
         }
 
         // 2. 예약 효과
-        if (ctx.card() != null) {
-            if (ctx.received()) {
-                effects.run(ctx, ctx.card().effectsAt(Timing.ON_RECEIVE));
+        if (ctx.received()) {
+            effects.run(ctx, ctx.cardEffects(Timing.ON_RECEIVE));
+        }
+        effects.run(ctx, ctx.cardEffects(Timing.ON_TURN_END));
+
+        // 3. 저주 발동: 저주받은 사람(행동한 사람)의 턴이 끝날 때
+        if (actor.alive() && actor.cursed()) {
+            Object onTurnEnd = actor.getCurse().getDef().get("onTurnEnd");
+            if (onTurnEnd != null) {
+                PlayerState caster = state.player(actor.getCurse().getCasterId());
+                effects.run(ctx.forCurse(actor, caster), PackParser.effects(onTurnEnd, "curse.onTurnEnd"));
             }
-            effects.run(ctx, ctx.card().effectsAt(Timing.ON_TURN_END));
         }
 
-        // 3. 저주 발동       — Phase 2
-        // 4. 지속 상태 틱     — Phase 2
-        // 5. 확률 효과(시한폭탄) — Phase 2, 항상 이 위치(맨 마지막)에서 판정
+        // 4. 지속 상태 틱: 걸린 그 턴에는 줄지 않는다
+        for (StatusState st : List.copyOf(actor.getStatuses())) {
+            if (st.getAppliedTurn() >= state.getTurnNumber()) {
+                continue;
+            }
+            if (Statuses.REGEN.equals(st.getStatus()) && st.getParams().get("amount") instanceof Number n) {
+                ctx.heal(actor, n.intValue(), "REGEN");
+            }
+            st.setTurnsLeft(st.getTurnsLeft() - 1);
+            if (st.getTurnsLeft() <= 0) {
+                ctx.removeStatus(actor, st);
+            }
+        }
 
-        // 6. 체력 상한 보정
+        // 5. 확률 효과(시한폭탄) — Phase 2-4, 항상 이 위치(맨 마지막)에서 판정
+
+        // 6. 체력 상한 보정 (저주로 줄어든 상한 포함)
         for (PlayerState p : state.getPlayers()) {
-            if (p.alive() && p.getHp() > p.getHpCap()) {
-                p.setHp(p.getHpCap());
+            int cap = Passives.hpCap(p);
+            if (p.alive() && p.getHp() > cap) {
+                ctx.setHp(p, cap, "HP_CAP");
             }
         }
 
-        // 7. 탈락 판정 (정산 중 0 이하로 내려갔다가 회복했으면 생존)
-        eliminate(state, events);
+        // 7. 탈락 판정 (정산 중 0 이하로 내려갔다가 회복했으면 생존). 탈락자가 건 저주는 풀린다
+        List<String> out = eliminate(state, events);
+        for (PlayerState p : state.alivePlayers()) {
+            if (p.cursed() && out.contains(p.getCurse().getCasterId())) {
+                ctx.removeCurse(p, "CASTER_ELIMINATED");
+            }
+        }
 
         // 8. 드로우
         if (actor.alive()) {
@@ -118,6 +150,12 @@ public final class TurnResolver {
         events.toPlayer(actor.getPlayerId(), EventType.HAND_UPDATED, payload("hand", List.copyOf(actor.getHand())));
         events.toAll(EventType.HAND_COUNT_CHANGED,
                 payload("playerId", actor.getPlayerId(), "count", actor.getHand().size()));
+        for (PlayerState p : state.alivePlayers()) {
+            if (Passives.has(p, Passives.REVEAL_HAND)) {
+                events.toAll(EventType.HAND_REVEALED, payload("playerId", p.getPlayerId(),
+                        "hand", List.copyOf(p.getHand())));
+            }
+        }
 
         // 9. 필드 정리 — Phase 2 (필드 락 만료)
 
@@ -130,9 +168,12 @@ public final class TurnResolver {
         }
     }
 
-    private void eliminate(GameState state, EventSink events) {
+    /** @return 이번에 탈락한 플레이어 ID */
+    private List<String> eliminate(GameState state, EventSink events) {
+        List<String> out = new ArrayList<>();
         for (PlayerState p : state.getPlayers()) {
             if (p.alive() && p.getHp() <= 0) {
+                out.add(p.getPlayerId());
                 p.setEliminated(true);
                 p.setEliminatedAtTurn(state.getTurnNumber());
                 p.getHand().clear();
@@ -140,6 +181,25 @@ public final class TurnResolver {
                         payload("playerId", p.getPlayerId(), "turnNumber", state.getTurnNumber()));
             }
         }
+        return out;
+    }
+
+    /**
+     * 프렌즈실드: 행동한 사람이 건 저주 중 REDIRECT_CASTER_RECEIVE가 있으면,
+     * 그 저주를 받은 사람이 누적 데미지를 대신 받는다.
+     */
+    private static PlayerState redirectTarget(GameState state, TurnContext ctx) {
+        for (PlayerState p : state.alivePlayers()) {
+            Map<?, ?> redirect = Passives.find(p, Passives.REDIRECT_CASTER_RECEIVE);
+            if (redirect == null || p == ctx.actor() || !ctx.actor().getPlayerId().equals(p.getCurse().getCasterId())) {
+                continue;
+            }
+            boolean onlyAttack = Boolean.TRUE.equals(redirect.get("onlyWhenAttackCard"));
+            if (!onlyAttack || (ctx.card() != null && ctx.card().attackCard())) {
+                return p;
+            }
+        }
+        return null;
     }
 
     /** 생존자가 1명 이하면 게임을 끝낸다 (PRD 7.10) */
@@ -187,8 +247,9 @@ public final class TurnResolver {
 
     public void startTurn(GameState state, EventSink events) {
         state.setTurnNumber(state.getTurnNumber() + 1);
-        state.setTurnDeadlineEpochMs(clock.millis() + state.getSettings().turnTimeSeconds() * 1000L);
         PlayerState current = state.currentPlayer();
+        int seconds = Passives.turnSeconds(current, state.getSettings().turnTimeSeconds());
+        state.setTurnDeadlineEpochMs(clock.millis() + seconds * 1000L);
         events.toAll(EventType.TURN_STARTED, payload(
                 "playerId", current.getPlayerId(),
                 "turnNumber", state.getTurnNumber(),
@@ -199,7 +260,7 @@ public final class TurnResolver {
 
     /** 7.9 드로우: 손패 한도까지 가중치 추첨 */
     public void drawUpTo(GameState state, PlayerState player) {
-        while (player.getHand().size() < player.getHandLimit()) {
+        while (player.getHand().size() < Passives.handLimit(player)) {
             CardDefinition def = pack.cardForRoll(GameRng.nextInt(state, pack.totalWeight()));
             player.getHand().add(new CardInstance(state.newInstanceId(), def.id()));
         }

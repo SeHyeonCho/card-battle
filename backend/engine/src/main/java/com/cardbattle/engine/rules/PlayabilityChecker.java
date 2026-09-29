@@ -47,11 +47,11 @@ public final class PlayabilityChecker {
         if (!conditions.testAll(card.conditions(), state, player)) {
             return Playability.blocked(PlayBlockReason.CONDITION_UNMET, "카드의 사용 조건을 만족하지 않습니다");
         }
-        // 7. 대상
-        if (card.targeting().requiresChoice()) {
+        // 7. 대상 (멈춰! 저주가 걸려 있으면 대상은 항상 자기 자신이라 검사하지 않는다)
+        if (card.targeting().requiresChoice() && !Passives.has(player, Passives.FORCE_SELF_TARGET)) {
             if (targetId == null) {
                 boolean anyTarget = state.alivePlayers().stream()
-                        .anyMatch(p -> card.targeting().allowsSelf() || p != player);
+                        .anyMatch(p -> p == player ? card.targeting().allowsSelf() : !untargetable(p));
                 if (!anyTarget) {
                     return Playability.invalidTarget("고를 수 있는 대상이 없습니다");
                 }
@@ -63,9 +63,16 @@ public final class PlayabilityChecker {
                 if (target == player && !card.targeting().allowsSelf()) {
                     return Playability.invalidTarget("자기 자신은 고를 수 없습니다");
                 }
+                if (target != player && untargetable(target)) {
+                    return Playability.invalidTarget("천상의 보호막 때문에 고를 수 없는 대상입니다");
+                }
             }
         }
         return Playability.ok();
+    }
+
+    private static boolean untargetable(PlayerState p) {
+        return p.status(Statuses.UNTARGETABLE) != null;
     }
 
     /** 이 카드를 막는 필드 락. 없으면 null */

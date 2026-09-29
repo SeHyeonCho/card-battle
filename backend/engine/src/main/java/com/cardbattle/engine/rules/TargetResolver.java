@@ -15,9 +15,13 @@ import java.util.Set;
  */
 public final class TargetResolver {
 
-    /** 효과에서 쓸 수 있는 대상 이름. CURSED는 저주 기능(Phase 2)에서 추가 */
+    /**
+     * 효과에서 쓸 수 있는 대상 이름. CURSED(저주받은 사람)·CASTER(저주를 건 사람)는
+     * 저주 효과 안에서만 의미가 있고 TurnContext가 처리한다.
+     */
     public static final Set<String> TARGETS = Set.of(
-            "SELF", "CHOSEN", "NEXT", "PREV", "ALL", "ALL_OTHERS", "RANDOM_ANY", "RANDOM_OTHER", "TOP_HP");
+            "SELF", "CHOSEN", "NEXT", "PREV", "ALL", "ALL_OTHERS", "RANDOM_ANY", "RANDOM_OTHER", "TOP_HP",
+            "CURSED", "CASTER");
 
     private TargetResolver() {
     }

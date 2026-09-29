@@ -14,15 +14,18 @@ public class StatusState {
     /** 상태를 건 사람 */
     private String sourceId;
     private Map<String, Object> params = new LinkedHashMap<>();
+    /** 걸린 턴 번호. 걸린 그 턴에는 줄지 않는다 */
+    private int appliedTurn;
 
     public StatusState() {
     }
 
-    public StatusState(String status, int turnsLeft, String sourceId, Map<String, Object> params) {
+    public StatusState(String status, int turnsLeft, String sourceId, Map<String, Object> params, int appliedTurn) {
         this.status = status;
         this.turnsLeft = turnsLeft;
         this.sourceId = sourceId;
         setParams(params);
+        this.appliedTurn = appliedTurn;
     }
 
     public String getStatus() {
@@ -55,5 +58,13 @@ public class StatusState {
 
     public void setParams(Map<String, Object> params) {
         this.params = params == null ? new LinkedHashMap<>() : new LinkedHashMap<>(params);
+    }
+
+    public int getAppliedTurn() {
+        return appliedTurn;
+    }
+
+    public void setAppliedTurn(int appliedTurn) {
+        this.appliedTurn = appliedTurn;
     }
 }
