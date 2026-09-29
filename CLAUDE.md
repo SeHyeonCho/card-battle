@@ -61,7 +61,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 현재 상태 (Phase 1)
 
-- 엔진: 완료, 테스트 56개 통과.
+- 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 140개 통과.
+  원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 sample import 로그 정상).
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
@@ -75,6 +76,6 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 다음 작업 순서
 
-1. Phase 2: 저주, 필드 락(최대 2턴), 지속 상태, 추가 제출, 확률 효과 (PRD 8.3 P1 프리미티브)
-   - 원작 팩(`packs/original`)의 import 오류 목록이 곧 구현할 효과 목록이다
-   - 효과 파라미터 `when`(조건부 발동)도 함께 구현한다. 지금은 모르는 파라미터를 무시하므로 빠뜨리면 조건 없이 발동한다
+1. Phase 2 화면: 저주·지속 상태·필드 락·시한폭탄·카운트다운 표시, 공개된 손패, 추가 제출 안내, 대상 선택 UX,
+   새 이벤트(`EventType`)를 `frontend/src/game/reduce.ts` 에서 처리. 그다음 원작 팩으로 실제 플레이
+2. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)

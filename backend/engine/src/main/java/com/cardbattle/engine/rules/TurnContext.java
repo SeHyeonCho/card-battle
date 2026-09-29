@@ -270,7 +270,7 @@ public final class TurnContext {
 
     /** 팩에서 가중치대로 새 카드 한 장을 뽑는다 (드로우 규칙 7.9와 같은 방식) */
     public CardInstance drawRandom() {
-        CardDefinition def = pack.cardForRoll(GameRng.nextInt(state, pack.totalWeight()));
+        CardDefinition def = Draws.one(state, pack);
         return new CardInstance(state.newInstanceId(), def.id());
     }
 

@@ -31,6 +31,8 @@ public enum EventType {
     DRAW_COUNTDOWN_CHANGED,
     /** 추가 제출 시작: 같은 플레이어가 한 장 더 낸다 */
     EXTRA_PLAY_STARTED,
+    /** 블랙홀: 카드가 게임에서 제외됨 */
+    CARDS_BANNED,
     PLAYER_ELIMINATED,
     TURN_ENDED,
     GAME_ENDED,

@@ -70,7 +70,9 @@ public final class EffectRegistry {
                 // 확률
                 new ChanceEffect(),
                 new RandomChoiceEffect(),
-                new TimeBombEffect()));
+                new TimeBombEffect(),
+                // 카드 전용 동작
+                new CustomEffect()));
     }
 
     public EffectHandler handler(String type) {

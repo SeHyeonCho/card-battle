@@ -9,7 +9,6 @@ import com.cardbattle.engine.event.EventSink;
 import com.cardbattle.engine.event.EventType;
 import com.cardbattle.engine.pack.PackParser;
 import com.cardbattle.engine.result.Playability;
-import com.cardbattle.engine.state.GameRng;
 import com.cardbattle.engine.state.GameState;
 import com.cardbattle.engine.state.GameStatus;
 import com.cardbattle.engine.state.PlayerState;
@@ -332,7 +331,7 @@ public final class TurnResolver {
     /** 7.9 드로우: 손패 한도까지 가중치 추첨 */
     public void drawUpTo(GameState state, PlayerState player) {
         while (player.getHand().size() < Passives.handLimit(player)) {
-            CardDefinition def = pack.cardForRoll(GameRng.nextInt(state, pack.totalWeight()));
+            CardDefinition def = Draws.one(state, pack);
             player.getHand().add(new CardInstance(state.newInstanceId(), def.id()));
         }
     }
