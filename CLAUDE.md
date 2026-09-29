@@ -61,11 +61,35 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 카드팩 폴더에 `assets/sounds/manifest.json`(카드 ID → mp3)이 있으면 서버가 `/api/packs/{code}/sounds` 로 제공하고,
   화면은 카드를 낼 때 그 소리를 재생한다 (없으면 기본 효과음). 원작 소리 파일은 로컬 전용.
 
-## 현재 상태 (Phase 1)
+## 작업 방식 (사용자와 합의한 것)
+
+- 답변·중간 보고·최종 요약은 **모두 한국어**로 쓴다 (코드·명령어·경로는 그대로).
+- **PR을 만들지 않는다.** 브랜치에서 작업 → `main` 에 fast-forward 병합 → `git push origin main`.
+  PR은 사용자가 명시적으로 요청할 때만 만든다.
+- 병합이 끝난 브랜치는 **삭제하기 전에 사용자에게 물어본다.**
+- 커밋은 기능 단위로 나누고 메시지는 한국어로 쓴다.
+- 공개 저장소이므로 문서·화면 문구에 사용 대상을 특정하는 표현을 쓰지 않는다 (원작 리소스는 "비공개 플레이 전용").
+
+## 로컬 전용 파일 (클라우드 세션·새로 받은 저장소에는 없다)
+
+`packs/original/` 은 gitignore 대상이라 GitHub에 없다. 원작 카드·효과음 작업은 이 폴더가 있는 로컬에서만 할 수 있다.
+
+| 경로 | 내용 |
+|---|---|
+| `packs/original/generate.py` → `pack.json`, `cards/*.json` | 원작 카드 145장 (출처: 나무위키 'EUD 랜덤카드배틀') |
+| `packs/original/assets/raw/` | 원작 맵 파일 1.14 / 1.19.1 (scmscx.com) |
+| `packs/original/assets/extracted/` | 맵에서 추출한 소리 (`mpq.py`, StormLib 필요: `brew install stormlib`) |
+| `packs/original/assets/review/` | 효과음 검토 페이지 (`.claude/launch.json` 의 `original-review` → `/review/`) |
+| `packs/original/assets/picks.json` → `build_sounds.py` → `sounds/` | 고른 효과음 59개 mp3 + `manifest.json` |
+
+폴더가 없으면 서버는 경고만 남기고 샘플 팩으로 동작하며, `OriginalPackPlayoutTest` 는 건너뛴다.
+
+## 현재 상태 (Phase 2 완료)
 
 - 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 140개 통과.
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
-- 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 sample import 로그 정상).
+- 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
+  원작 팩이 있으면 카드별 효과음 59개를 등록해 `/api/packs/{code}/sounds` 로 제공한다.
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
