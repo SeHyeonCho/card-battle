@@ -43,6 +43,8 @@ public class GameService {
     }
 
     private static final int MAX_ACTIONS_PER_SECOND = 5;
+    /** 스냅샷용으로 읽는 최근 이벤트 수. 개인 이벤트가 섞여 있어 엔진이 담는 개수보다 넉넉히 읽는다 */
+    private static final int SNAPSHOT_HISTORY = GameEngine.RECENT_EVENT_LIMIT * 2;
 
     private final GameRepository games;
     private final PackCatalog packs;
@@ -131,7 +133,8 @@ public class GameService {
                 publisher.reject(gameId, playerId, "PLAYER_NOT_FOUND", null, "이 게임의 참가자가 아닙니다");
                 return;
             }
-            publisher.sendToPlayer(gameId, playerId, "SNAPSHOT", engineFor(state).snapshot(state, playerId));
+            publisher.sendToPlayer(gameId, playerId, "SNAPSHOT",
+                    engineFor(state).snapshot(state, playerId, games.recentEvents(gameId, SNAPSHOT_HISTORY)));
         });
     }
 

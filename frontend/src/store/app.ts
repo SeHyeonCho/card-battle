@@ -1,7 +1,7 @@
 import { create } from 'zustand'
 import { api } from '../api/http'
 import { sfx } from '../audio/sfx'
-import { fromSnapshot, reduce, type Fx, type GameView } from '../game/reduce'
+import { fromSnapshot, logFromHistory, reduce, type Fx, type GameView } from '../game/reduce'
 import { send, subscribeGame, subscribeRoom, unsubscribeGame, type RoomMessage } from '../net/connection'
 import type { GameSnapshot, Room, ServerMessage, Session } from '../types'
 import { readStorage, writeStorage } from '../util'
@@ -53,6 +53,8 @@ interface AppState {
 
 const SESSION_KEY = 'session'
 export const INVITE_KEY = 'last-invite'
+/** 게임 로그에 남겨 두는 줄 수 */
+const LOG_LIMIT = 50
 
 let nextId = 1
 
@@ -87,7 +89,7 @@ export const useApp = create<AppState>((set, get) => {
           break
         }
         case 'log':
-          set((s) => ({ log: [...s.log.slice(-49), { id: nextId++, text: f.text }] }))
+          set((s) => ({ log: [...s.log.slice(-(LOG_LIMIT - 1)), { id: nextId++, text: f.text }] }))
           break
         case 'toast':
           get().toast(f.text)
@@ -156,7 +158,12 @@ export const useApp = create<AppState>((set, get) => {
     handleGameMessage: (message) => {
       if (message.type === 'SNAPSHOT') {
         const snapshot = message.payload as unknown as GameSnapshot
-        set({ game: fromSnapshot(snapshot), screen: 'game' })
+        const game = fromSnapshot(snapshot)
+        // 새로고침·재동기화: 서버가 담아 준 최근 이벤트로 게임 로그를 다시 채운다
+        const log = logFromHistory(game, snapshot.recentEvents ?? [])
+          .slice(-LOG_LIMIT)
+          .map((text) => ({ id: nextId++, text }))
+        set({ game, log, screen: 'game' })
         loadCardSounds(snapshot.packCode)
         return
       }

@@ -149,6 +149,8 @@ export interface GameSnapshot {
   packCode: string
   packVersion: number
   cards: CardInfo[]
+  /** 최근 공개 이벤트 (오래된 것부터). 새로고침 후 게임 로그를 다시 채운다 */
+  recentEvents?: ServerMessage[]
 }
 
 /** 서버가 보내는 모든 게임 메시지: {type, payload, seq?, version?} */

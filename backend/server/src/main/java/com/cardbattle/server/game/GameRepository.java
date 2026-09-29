@@ -70,9 +70,15 @@ public class GameRepository {
         if (events.isEmpty()) {
             return;
         }
-        String key = "game:" + gameId + ":events";
+        String key = eventsKey(gameId);
         redis.opsForList().rightPushAll(key, events.stream().map(json::write).toList());
         redis.expire(key, TTL);
+    }
+
+    /** 가장 최근 이벤트 count개 (오래된 것부터). 개인 이벤트도 섞여 있으니 걸러서 써야 한다 */
+    public List<GameEvent> recentEvents(String gameId, int count) {
+        List<String> raw = redis.opsForList().range(eventsKey(gameId), -count, -1);
+        return raw == null ? List.of() : raw.stream().map(value -> json.read(value, GameEvent.class)).toList();
     }
 
     private boolean compareAndSet(GameState state, long expectedVersion) {
@@ -87,6 +93,10 @@ public class GameRepository {
 
     private static String stateKey(String gameId) {
         return "game:" + gameId + ":state";
+    }
+
+    private static String eventsKey(String gameId) {
+        return "game:" + gameId + ":events";
     }
 
     private static String versionKey(String gameId) {

@@ -346,15 +346,32 @@ public final class GameEngine {
     // 조회
     // ------------------------------------------------------------------
 
-    /** 특정 플레이어 시점의 스냅샷 (재접속용). 다른 사람의 손패는 넣지 않는다 */
+    /** 스냅샷에 넣는 최근 공개 이벤트 수 (게임 로그 복원용) */
+    public static final int RECENT_EVENT_LIMIT = 200;
+
     public GameSnapshot snapshot(GameState state, String viewerId) {
+        return snapshot(state, viewerId, List.of());
+    }
+
+    /**
+     * 특정 플레이어 시점의 스냅샷 (재접속용). 다른 사람의 손패는 넣지 않는다.
+     *
+     * @param history 지금까지 기록된 이벤트 (오래된 것부터). 이 중 공개 이벤트의 최근 것만 담는다
+     *                — 개인 이벤트(남의 손패 등)는 절대 넣지 않는다
+     */
+    public GameSnapshot snapshot(GameState state, String viewerId, List<GameEvent> history) {
+        long lastSeq = state.getNextSeq() - 1;
+        List<GameEvent> recent = history.stream()
+                .filter(e -> e.publicEvent() && e.seq() <= lastSeq)
+                .toList();
+        recent = recent.subList(Math.max(0, recent.size() - RECENT_EVENT_LIMIT), recent.size());
         PlayerState viewer = state.player(viewerId);
         List<CardInstance> myHand = viewer == null ? List.of() : List.copyOf(viewer.getHand());
         boolean myTurn = viewer != null && state.inProgress() && viewer == state.currentPlayer();
         return new GameSnapshot(
                 state.getGameId(),
                 state.getVersion(),
-                state.getNextSeq() - 1,
+                lastSeq,
                 state.getSettings(),
                 state.getStatus(),
                 state.getTurnNumber(),
@@ -375,7 +392,8 @@ public final class GameEngine {
                 List.copyOf(state.getWinnerIds()),
                 pack.code(),
                 pack.version(),
-                pack.cards().stream().map(CardView::of).toList());
+                pack.cards().stream().map(CardView::of).toList(),
+                List.copyOf(recent));
     }
 
     private static List<PlayerView> playerViews(GameState state) {

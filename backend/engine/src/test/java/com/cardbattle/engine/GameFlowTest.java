@@ -9,9 +9,11 @@ import com.cardbattle.engine.view.GameSnapshot;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -138,5 +140,44 @@ class GameFlowTest {
         assertEquals(5, snap.players().get(0).handCount());
         assertTrue(snap.playability().isEmpty()); // 내 차례가 아니면 비어 있다
         assertEquals(TestCards.standardPack().cards().size(), snap.cards().size());
+    }
+
+    @Test
+    @DisplayName("스냅샷의 최근 이벤트에는 공개 이벤트만, 오래된 것부터 담긴다 (새로고침 후 게임 로그 복원)")
+    void snapshotCarriesRecentPublicEvents() {
+        GameEngine engine = engine();
+        GameEngine.StartResult start = engine.start("g1", GameSettings.defaults(), FOUR, 99L);
+        GameState s = start.state();
+        List<GameEvent> history = new ArrayList<>(start.events());
+        history.addAll(engine.timeout(s).events());
+        String viewer = s.getPlayers().get(2).getPlayerId();
+
+        GameSnapshot snap = engine.snapshot(s, viewer, history);
+
+        assertFalse(snap.recentEvents().isEmpty());
+        assertTrue(snap.recentEvents().stream().allMatch(GameEvent::publicEvent), "남의 손패가 담긴 개인 이벤트는 빠진다");
+        assertEquals(history.stream().filter(GameEvent::publicEvent).toList(), snap.recentEvents());
+        assertEquals(EventType.GAME_STARTED, snap.recentEvents().get(0).type());
+        assertEquals(snap.lastSeq(), history.get(history.size() - 1).seq());
+        assertTrue(engine.snapshot(s, viewer).recentEvents().isEmpty());
+    }
+
+    @Test
+    @DisplayName("스냅샷의 최근 이벤트는 개수 제한만큼 가장 최근 것만 담는다")
+    void snapshotRecentEventsAreCapped() {
+        GameEngine engine = engine();
+        GameEngine.StartResult start = engine.start("g1", GameSettings.defaults(), FOUR, 5L);
+        GameState s = start.state();
+        List<GameEvent> history = new ArrayList<>(start.events());
+        while (history.stream().filter(GameEvent::publicEvent).count() <= GameEngine.RECENT_EVENT_LIMIT
+                && s.inProgress()) {
+            history.addAll(engine.timeout(s).events());
+        }
+        List<GameEvent> publicEvents = history.stream().filter(GameEvent::publicEvent).toList();
+
+        List<GameEvent> recent = engine.snapshot(s, "a", history).recentEvents();
+
+        assertEquals(GameEngine.RECENT_EVENT_LIMIT, recent.size());
+        assertEquals(publicEvents.get(publicEvents.size() - 1), recent.get(recent.size() - 1));
     }
 }

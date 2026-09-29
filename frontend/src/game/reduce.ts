@@ -102,6 +102,15 @@ export function fromSnapshot(s: GameSnapshot): GameView {
 const str = (v: unknown) => (typeof v === 'string' ? v : '')
 const num = (v: unknown) => (typeof v === 'number' ? v : 0)
 
+/**
+ * 스냅샷에 담긴 최근 이벤트로 게임 로그 문구를 다시 만든다 (새로고침 복원, FR-UI-04).
+ * 문구는 이벤트 내용과 닉네임·카드 이름만으로 정해지므로 스냅샷 화면 상태를 기준으로 만들고, 상태 변화는 버린다.
+ */
+export function logFromHistory(view: GameView, events: ServerMessage[]): string[] {
+  const base = { ...view, lastSeq: -1 }
+  return events.flatMap((e) => reduce(base, e).fx.flatMap((f) => (f.kind === 'log' ? [f.text] : [])))
+}
+
 export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx: Fx[] } {
   if (msg.seq !== undefined && msg.seq <= view.lastSeq) {
     return { view, fx: [] } // 스냅샷에 이미 들어 있는 이벤트
