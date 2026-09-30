@@ -100,6 +100,13 @@ def candidates():
         "error_1": mix(tone(lambda t: 110, 0.12, attack=0.002, decay=0.08, shape="square"), tone(lambda t: 110, 0.12, attack=0.002, decay=0.08, shape="square"), offsets=[0, 0.15]),
         "error_2": tone(lambda t: 2000, 0.06, attack=0.001, decay=0.03, shape="square"),
         "error_3": tone(lambda t: 600 * math.exp(-t * 8), 0.18, attack=0.002, decay=0.08, shape="square"),
+        # 버튼 클릭
+        "click_1": tone(lambda t: 1000, 0.04, attack=0.001, decay=0.015, shape="square"),
+        "click_2": mix(tone(lambda t: 1500, 0.03, attack=0.001, decay=0.01, shape="square"),
+                       tone(lambda t: 1000, 0.04, attack=0.001, decay=0.015, shape="square"), offsets=[0, 0.03]),
+        "click_3": mix(noise(0.02, 0.004, seed=31), tone(lambda t: 180 * math.exp(-t * 30) + 60, 0.06, attack=0.001, decay=0.02)),
+        "click_4": tone(lambda t: 700 * math.exp(-t * 12), 0.06, attack=0.001, decay=0.025),
+        "click_5": arp([1318.5, 1975.5], 0.035, shape="square", decay=0.02, length=0.05),
     }
 
 
