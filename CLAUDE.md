@@ -60,6 +60,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - `packs/sample` 은 공개용 오리지널 카드만 둔다.
 - 카드팩 폴더에 `assets/sounds/manifest.json`(카드 ID → mp3)이 있으면 서버가 `/api/packs/{code}/sounds` 로 제공하고,
   화면은 카드를 낼 때 그 소리를 재생한다 (없으면 기본 효과음). 원작 소리 파일은 로컬 전용.
+  대응표 키가 `@card`·`@hit` 처럼 `@<기본 효과음 이름>` 이면 그 팩에서만 기본 효과음을 덮어쓴다 (원작 팩: 카드 내기·맞음).
+  카드 고유 소리가 나는 동안에는 카드 내기·맞음·회복·차례 기본 소리를 겹쳐 내지 않는다 (`frontend/src/audio/sfx.ts`).
 - 같은 방식으로 `assets/images/cards/manifest.json`(카드 ID → png/webp, 96×128)이 있으면 `/api/packs/{code}/images` 로 제공하고,
   화면은 카드를 그림으로 그린다 (마우스를 올리면 전체 효과 설명). 없으면 글자 카드. 원작 그림 파일은 로컬 전용.
 
@@ -83,6 +85,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 | `packs/original/assets/extracted/` | 맵에서 추출한 소리 (`mpq.py`, StormLib 필요: `brew install stormlib`) |
 | `packs/original/assets/review/` | 효과음 검토 페이지 (`.claude/launch.json` 의 `original-review` → `/review/`) |
 | `packs/original/assets/picks.json` → `build_sounds.py` → `sounds/` | 고른 효과음 59개 mp3 + `manifest.json` |
+| `packs/original/assets/default_picks.json` → `build_sounds.py` | 기본 효과음을 덮어쓸 원작 소리 (`sounds/default-*.mp3`, 대응표 키 `@card`·`@hit`) |
+| `packs/original/assets/review/defaults.html` | 기본 효과음 검토 페이지 (`build_defaults.py`, `original-review` → `/review/defaults.html`) |
 | `packs/original/assets/fetch_namu_images.py` → `images/namu/` | 나무위키 카드 그림 94장 (기본 카드, 이름표로 짝 맞춤) |
 | `packs/original/assets/images/make_cards.py` → `generated/`, `cards/` | 그림 없는 신규 51장을 원작 틀로 생성 + 서버가 읽는 최종 145장·`manifest.json` |
 | `packs/original/assets/images/custom/`, `full/` | 사진 교체용: `custom/<카드ID>.png`(그림 칸만) 또는 `full/<카드ID>.png`(완성 카드) 넣고 `make_cards.py` 다시 실행 |

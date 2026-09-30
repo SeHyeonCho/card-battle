@@ -37,7 +37,7 @@ interface AppState {
   floaters: Floater[]
   /** playerId → 흔들기 카운터 (값이 바뀔 때마다 좌석이 흔들린다) */
   shakes: Record<string, number>
-  /** 카드 ID → 효과음 주소 (카드팩에 카드별 소리가 있을 때) */
+  /** 카드 ID → 효과음 주소 (카드팩에 카드별 소리가 있을 때). "@hit" 처럼 @로 시작하면 기본 효과음을 덮어쓰는 소리 */
   cardSounds: Record<string, string>
   /** 카드 ID → 카드 그림 주소 (카드팩에 카드 그림이 있을 때, 없으면 글자 카드) */
   cardImages: Record<string, string>
@@ -87,14 +87,14 @@ export const useApp = create<AppState>((set, get) => {
     for (const f of fx) {
       switch (f.kind) {
         case 'sound':
-          sfx.play(f.name)
+          sfx.play(f.name, get().cardSounds[`@${f.name}`])
           break
         case 'cardSound': {
           const url = get().cardSounds[f.cardId]
           if (url) {
             sfx.playUrl(url)
           } else {
-            sfx.play('card')
+            sfx.play('card', get().cardSounds['@card'])
           }
           break
         }

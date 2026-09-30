@@ -43,17 +43,31 @@ function cardSoundPlaying(): boolean {
 let muted = readMuted()
 Howler.mute(muted)
 
+function howlFor(url: string): Howl {
+  let howl = byUrl.get(url)
+  if (!howl) {
+    howl = new Howl({ src: [url], format: ['mp3'], volume: 0.7 })
+    byUrl.set(url, howl)
+  }
+  return howl
+}
+
 export const sfx = {
-  play(name: SfxName) {
+  /**
+   * 기본 효과음. override 가 있으면(카드팩이 기본 소리를 덮어씀, 대응표 키 "@<이름>") 그 소리를 낸다.
+   * 카드 고유 소리가 나는 동안에는 겹치지 않게 건너뛴다
+   */
+  play(name: SfxName, override?: string) {
     if (YIELD_TO_CARD.has(name) && cardSoundPlaying()) return
-    sounds.get(name)?.play()
-  },
-  playUrl(url: string) {
-    let howl = byUrl.get(url)
-    if (!howl) {
-      howl = new Howl({ src: [url], format: ['mp3'], volume: 0.7 })
-      byUrl.set(url, howl)
+    if (override) {
+      howlFor(override).play()
+    } else {
+      sounds.get(name)?.play()
     }
+  },
+  /** 카드 고유 소리 */
+  playUrl(url: string) {
+    const howl = howlFor(url)
     howl.play()
     cardSound = { howl, startedAt: Date.now() }
   },
