@@ -117,7 +117,11 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
     1초 6번째 요청부터 `RATE_LIMITED`
 - 새로고침해도 게임 로그 유지: 스냅샷에 최근 공개 이벤트(최대 200개)를 담고, 화면이 `reduce` 로그 문구로 다시 채운다
 - 자리 비움·강퇴 (PRD 4.3): 3번 연속 시간 초과 → `PLAYER_AWAY_CHANGED`, 방장이 `/app/rooms/{roomId}/kick` 으로 강퇴
-  (게임에서 탈락 + 방에서 제외. 차례였던 사람이면 누적은 사라지고 다음 차례). 대기실 강퇴(FR-ROOM-05)는 아직 없음
+  (게임에서 탈락 + 방에서 제외. 차례였던 사람이면 누적은 사라지고 다음 차례)
+- 대기실 설정 변경·강퇴 (FR-ROOM-05): 방장이 `/app/rooms/{roomId}/settings` `{settings}`(준 값만 바뀜, 지금 인원보다 적은
+  최대 인원 거부, 바뀌면 참가자 준비 해제)와 `/app/rooms/{roomId}/kick`(대기실은 누구나, 게임 중은 자리 비움만).
+  강퇴된 사람은 `Room.kickedIds` 에 남아 같은 방에 다시 못 들어온다 (`KICKED`). 서버 테스트 `RoomServiceTest` 는
+  Redis·STOMP 대신 메모리 가짜를 끼워 `RoomService` 를 직접 돌린다
 - 멈춰! 저주: 제출 가능 여부의 `forcedTargetId` 로 화면이 대상 선택 없이 바로 낸다
 - 차례 전환 (FR-GAME-10): 차례가 시작되면 `GameSettings.TURN_TRANSITION_MS`(1.5초) 동안 내기·버리기를 엔진이
   `TURN_TRANSITION` 으로 거절하고, 턴 제한 시간은 전환이 끝난 뒤부터 센다. 화면은 차례 배너를 띄우고,
