@@ -60,6 +60,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - `packs/sample` 은 공개용 오리지널 카드만 둔다.
 - 카드팩 폴더에 `assets/sounds/manifest.json`(카드 ID → mp3)이 있으면 서버가 `/api/packs/{code}/sounds` 로 제공하고,
   화면은 카드를 낼 때 그 소리를 재생한다 (없으면 기본 효과음). 원작 소리 파일은 로컬 전용.
+- 같은 방식으로 `assets/images/cards/manifest.json`(카드 ID → png/webp, 96×128)이 있으면 `/api/packs/{code}/images` 로 제공하고,
+  화면은 카드를 그림으로 그린다 (마우스를 올리면 전체 효과 설명). 없으면 글자 카드. 원작 그림 파일은 로컬 전용.
 
 ## 작업 방식 (사용자와 합의한 것)
 
@@ -81,6 +83,10 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 | `packs/original/assets/extracted/` | 맵에서 추출한 소리 (`mpq.py`, StormLib 필요: `brew install stormlib`) |
 | `packs/original/assets/review/` | 효과음 검토 페이지 (`.claude/launch.json` 의 `original-review` → `/review/`) |
 | `packs/original/assets/picks.json` → `build_sounds.py` → `sounds/` | 고른 효과음 59개 mp3 + `manifest.json` |
+| `packs/original/assets/fetch_namu_images.py` → `images/namu/` | 나무위키 카드 그림 94장 (기본 카드, 이름표로 짝 맞춤) |
+| `packs/original/assets/images/make_cards.py` → `generated/`, `cards/` | 그림 없는 신규 51장을 원작 틀로 생성 + 서버가 읽는 최종 145장·`manifest.json` |
+| `packs/original/assets/images/custom/`, `full/` | 사진 교체용: `custom/<카드ID>.png`(그림 칸만) 또는 `full/<카드ID>.png`(완성 카드) 넣고 `make_cards.py` 다시 실행 |
+| `packs/original/assets/images/review.html` | 카드 그림 검토 페이지 (`build_review.py`, `original-review` → `/images/review.html`) |
 
 폴더가 없으면 서버는 경고만 남기고 샘플 팩으로 동작하며, `OriginalPackPlayoutTest` 는 건너뛴다.
 
@@ -89,7 +95,7 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 151개 통과.
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
-  원작 팩이 있으면 카드별 효과음 59개를 등록해 `/api/packs/{code}/sounds` 로 제공한다.
+  원작 팩이 있으면 카드별 효과음 59개와 카드 그림 145장을 등록해 `/api/packs/{code}/sounds`, `/images` 로 제공한다.
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
@@ -106,5 +112,6 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 다음 작업 순서
 
-1. 원작 이미지 연결 (효과음은 연결 완료: `packs/original/assets/picks.json` → `build_sounds.py` → `assets/sounds/`)
+1. 신규 51장의 실제 그림을 구하면 `images/custom/` 에 넣고 교체 (1.19.1 맵은 그림이 풀리지 않는 형태로 들어 있어 추출 못 함,
+   1.14 맵에는 기본 카드 그림이 GRP로 들어 있음)
 2. 원작 카드 데이터를 고치면 `packs/original/generate.py` 의 pack `version` 을 올린다 (같은 버전은 다시 import하지 않음)

@@ -38,6 +38,7 @@ export const api = {
 
   /** 카드 ID → 효과음 주소. 카드별 소리가 없는 팩이면 빈 객체 */
   cardSounds: (packCode: string) => request<Record<string, string>>('GET', `/api/packs/${encodeURIComponent(packCode)}/sounds`),
+  cardImages: (packCode: string) => request<Record<string, string>>('GET', `/api/packs/${encodeURIComponent(packCode)}/images`),
 
   joinRoom: (token: string, inviteCode: string) =>
     request<Room>('POST', `/api/rooms/${encodeURIComponent(inviteCode)}/join`, undefined, auth(token)),

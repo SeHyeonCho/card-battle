@@ -1,3 +1,4 @@
+import { useApp } from '../store/app'
 import type { CardInfo } from '../types'
 
 const STYLE: Record<CardInfo['category'], { label: string; className: string }> = {
@@ -15,8 +16,43 @@ interface Props {
   size?: 'hand' | 'field'
 }
 
-/** 카드 앞면. 지금은 이미지 없이 텍스트로만 그린다 */
+/** 카드 앞면. 카드팩에 그림이 있으면 그림으로, 없으면 글자로 그린다 */
 export function CardFace({ card, attack, size = 'hand' }: Props) {
+  const image = useApp((s) => s.cardImages[card.id])
+  return image ? <ImageFace card={card} attack={attack} size={size} image={image} /> : <TextFace card={card} attack={attack} size={size} />
+}
+
+/**
+ * 그림 카드 (96×128 비율). 그림에는 이름과 짧은 설명만 있으므로
+ * 마우스를 올리면 그림 칸 위에 전체 효과 설명을 띄운다.
+ */
+function ImageFace({ card, attack, size, image }: Props & { image: string }) {
+  const big = size === 'field'
+  // 주사위 폭탄처럼 공격력이 무작위거나 슈퍼파워로 바뀐 경우 실제 공격력을 따로 표시
+  const shownAttack = attack !== undefined && attack !== card.attack ? attack : null
+  return (
+    <div className={`group relative overflow-hidden rounded-lg shadow-lg shadow-black/40 ${big ? 'h-56 w-42' : 'h-44 w-33'}`}>
+      <img src={image} alt={card.name} draggable={false} className="h-full w-full select-none" />
+      {shownAttack !== null && (
+        <span
+          className={`absolute right-1 top-1 rounded-md bg-black/80 px-1.5 font-black leading-tight text-amber-200 ${big ? 'text-2xl' : 'text-lg'}`}
+        >
+          {shownAttack}
+        </span>
+      )}
+      <div
+        className={`pointer-events-none absolute inset-x-[8%] top-[6%] flex h-[62%] flex-col justify-center rounded bg-black/85 p-2 text-left leading-snug text-white opacity-0 transition-opacity group-hover:opacity-100 ${
+          big ? 'text-xs' : 'text-[11px]'
+        }`}
+      >
+        {card.description}
+        {card.flavor && <span className="mt-1 text-[10px] italic text-white/60">{card.flavor}</span>}
+      </div>
+    </div>
+  )
+}
+
+function TextFace({ card, attack, size }: Props) {
   const style = STYLE[card.category]
   const big = size === 'field'
   const power =

@@ -39,7 +39,10 @@ interface AppState {
   shakes: Record<string, number>
   /** 카드 ID → 효과음 주소 (카드팩에 카드별 소리가 있을 때) */
   cardSounds: Record<string, string>
-  cardSoundsPack: string | null
+  /** 카드 ID → 카드 그림 주소 (카드팩에 카드 그림이 있을 때, 없으면 글자 카드) */
+  cardImages: Record<string, string>
+  /** 효과음·그림을 받아 둔 카드팩 */
+  assetsPack: string | null
 
   setSession: (session: Session | null) => void
   enterRoom: (room: Room) => void
@@ -59,18 +62,25 @@ const LOG_LIMIT = 50
 let nextId = 1
 
 export const useApp = create<AppState>((set, get) => {
-  /** 카드팩의 카드별 효과음 주소를 한 번 받아 둔다. 없거나 실패하면 기본 소리를 쓴다 */
-  function loadCardSounds(packCode: string) {
-    if (get().cardSoundsPack === packCode) return
-    set({ cardSounds: {}, cardSoundsPack: packCode })
+  /**
+   * 카드팩의 카드별 효과음·그림 주소를 한 번 받아 둔다.
+   * 없거나 실패하면 기본 소리와 글자 카드를 쓴다 (없어도 게임은 된다)
+   */
+  function loadPackAssets(packCode: string) {
+    if (get().assetsPack === packCode) return
+    set({ cardSounds: {}, cardImages: {}, assetsPack: packCode })
     api
       .cardSounds(packCode)
       .then((cardSounds) => {
-        if (get().cardSoundsPack === packCode) set({ cardSounds })
+        if (get().assetsPack === packCode) set({ cardSounds })
       })
-      .catch(() => {
-        // 효과음은 없어도 게임은 된다
+      .catch(() => {})
+    api
+      .cardImages(packCode)
+      .then((cardImages) => {
+        if (get().assetsPack === packCode) set({ cardImages })
       })
+      .catch(() => {})
   }
 
   function runFx(fx: Fx[]) {
@@ -126,7 +136,8 @@ export const useApp = create<AppState>((set, get) => {
     floaters: [],
     shakes: {},
     cardSounds: {},
-    cardSoundsPack: null,
+    cardImages: {},
+    assetsPack: null,
 
     setSession: (session) => {
       writeStorage(SESSION_KEY, session)
@@ -173,7 +184,7 @@ export const useApp = create<AppState>((set, get) => {
           .slice(-LOG_LIMIT)
           .map((text) => ({ id: nextId++, text }))
         set({ game, log, screen: 'game' })
-        loadCardSounds(snapshot.packCode)
+        loadPackAssets(snapshot.packCode)
         return
       }
       const game = get().game
