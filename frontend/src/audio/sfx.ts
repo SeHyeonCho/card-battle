@@ -1,4 +1,5 @@
 import { Howl, Howler } from 'howler'
+import { bgm } from './bgm'
 
 /**
  * 효과음 (PRD FR-UI-08). 기본 소리는 public/sfx/ 에 있고 tools/gen_sfx.py 로 만든 자체 제작 사운드다.
@@ -66,6 +67,9 @@ function afterCardSound(howl: Howl, action: () => void) {
   howl.once('stop', fire)
 }
 
+/** 카드 소리가 이보다 길어도 배경음악은 이만큼 뒤에 다시 튼다 (가장 긴 카드 소리 약 6.7초) */
+const CARD_DUCK_MAX_MS = 8000
+
 let muted = readMuted()
 Howler.mute(muted)
 
@@ -94,11 +98,29 @@ export const sfx = {
     }
     start()
   },
-  /** 카드 고유 소리 */
+  /** 카드 고유 소리. 나는 동안 배경음악은 멈췄다가 끝나면 이어서 튼다 */
   playUrl(url: string) {
     const howl = howlFor(url)
-    howl.play()
+    const id = howl.play()
     cardSound = { howl, startedAt: Date.now() }
+    bgm.duck()
+    let done = false
+    const release = () => {
+      if (done) return
+      done = true
+      clearTimeout(safety)
+      howl.off('end', release, id)
+      howl.off('stop', release, id)
+      howl.off('loaderror', release)
+      howl.off('playerror', release, id)
+      bgm.unduck()
+    }
+    // 끝 신호를 못 받는 경우(불러오기 실패 등)에도 배경음악이 영영 멈춰 있지 않게
+    const safety = setTimeout(release, CARD_DUCK_MAX_MS)
+    howl.once('end', release, id)
+    howl.once('stop', release, id)
+    howl.once('loaderror', release)
+    howl.once('playerror', release, id)
   },
   muted: () => muted,
   setMuted(value: boolean) {
