@@ -61,7 +61,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 카드팩 폴더에 `assets/sounds/manifest.json`(카드 ID → mp3)이 있으면 서버가 `/api/packs/{code}/sounds` 로 제공하고,
   화면은 카드를 낼 때 그 소리를 재생한다 (없으면 기본 효과음). 원작 소리 파일은 로컬 전용.
   대응표 키가 `@card`·`@hit` 처럼 `@<기본 효과음 이름>` 이면 그 팩에서만 기본 효과음을 덮어쓴다 (원작 팩: 카드 내기·맞음).
-  카드 고유 소리가 나는 동안에는 카드 내기·맞음·회복·차례 기본 소리를 겹쳐 내지 않는다 (`frontend/src/audio/sfx.ts`).
+  카드 고유 소리가 나는 동안 카드 내기·맞음·회복 기본 소리는 건너뛰고, '내 차례' 소리는 카드 소리가 끝날 때까지
+  (최대 1.5초) 미뤘다가 낸다 (`frontend/src/audio/sfx.ts`).
 - 같은 방식으로 `assets/images/cards/manifest.json`(카드 ID → png/webp, 96×128)이 있으면 `/api/packs/{code}/images` 로 제공하고,
   화면은 카드를 그림으로 그린다 (마우스를 올리면 전체 효과 설명). 없으면 글자 카드. 원작 그림 파일은 로컬 전용.
 

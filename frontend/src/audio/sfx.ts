@@ -27,10 +27,16 @@ function readMuted(): boolean {
 const byUrl = new Map<string, Howl>()
 
 /**
- * 카드 고유 소리가 나는 동안 덮지 않는 기본 소리. 카드를 내면 서버가 체력 변화·차례 넘김을 곧바로 이어 보내서
- * 맞음·회복·차례 소리가 카드 소리와 겹친다. 탈락·승리·오류는 중요한 알림이라 그대로 낸다
+ * 카드 고유 소리가 나는 동안 덮지 않고 건너뛰는 기본 소리. 카드를 내면 서버가 체력 변화를 곧바로 이어 보내서
+ * 맞음·회복 소리가 카드 소리와 겹친다. 탈락·승리·오류는 중요한 알림이라 그대로 낸다
  */
-const YIELD_TO_CARD: ReadonlySet<SfxName> = new Set(['card', 'hit', 'heal', 'turn'])
+const YIELD_TO_CARD: ReadonlySet<SfxName> = new Set(['card', 'hit', 'heal'])
+/**
+ * 카드 소리가 끝날 때까지 미뤘다가 내는 기본 소리. '내 차례'는 버리면 차례가 온 줄 모르므로 미루기만 한다.
+ * 카드 소리는 대부분 1.5초보다 길어서(중간값 약 1.9초), 턴 시간을 잡아먹지 않게 차례 전환 시간만큼만 기다린다
+ */
+const WAIT_FOR_CARD: ReadonlySet<SfxName> = new Set(['turn'])
+const WAIT_FOR_CARD_MAX_MS = 1500
 /** 처음 재생하는 카드 소리는 불러오는 동안 playing()이 거짓이라, 시작 직후 잠깐은 재생 중으로 본다 */
 const CARD_START_GRACE_MS = 600
 let cardSound: { howl: Howl; startedAt: number } | null = null
@@ -38,6 +44,22 @@ let cardSound: { howl: Howl; startedAt: number } | null = null
 function cardSoundPlaying(): boolean {
   if (!cardSound) return false
   return cardSound.howl.playing() || Date.now() - cardSound.startedAt < CARD_START_GRACE_MS
+}
+
+/** 카드 소리가 끝나거나 WAIT_FOR_CARD_MAX_MS 가 지나면(먼저 오는 쪽) 한 번만 부른다 */
+function afterCardSound(howl: Howl, action: () => void) {
+  let done = false
+  const fire = () => {
+    if (done) return
+    done = true
+    clearTimeout(timer)
+    howl.off('end', fire)
+    howl.off('stop', fire)
+    action()
+  }
+  const timer = setTimeout(fire, WAIT_FOR_CARD_MAX_MS)
+  howl.once('end', fire)
+  howl.once('stop', fire)
 }
 
 let muted = readMuted()
@@ -58,12 +80,15 @@ export const sfx = {
    * 카드 고유 소리가 나는 동안에는 겹치지 않게 건너뛴다
    */
   play(name: SfxName, override?: string) {
-    if (YIELD_TO_CARD.has(name) && cardSoundPlaying()) return
-    if (override) {
-      howlFor(override).play()
-    } else {
-      sounds.get(name)?.play()
+    const start = () => (override ? howlFor(override).play() : sounds.get(name)?.play())
+    if (cardSoundPlaying()) {
+      if (YIELD_TO_CARD.has(name)) return
+      if (WAIT_FOR_CARD.has(name) && cardSound) {
+        afterCardSound(cardSound.howl, start)
+        return
+      }
     }
+    start()
   },
   /** 카드 고유 소리 */
   playUrl(url: string) {
