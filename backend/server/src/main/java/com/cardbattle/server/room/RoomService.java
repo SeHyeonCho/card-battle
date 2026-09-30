@@ -2,6 +2,7 @@ package com.cardbattle.server.room;
 
 import com.cardbattle.server.common.AccessGuard;
 import com.cardbattle.server.common.ApiException;
+import com.cardbattle.server.config.AppProperties;
 import com.cardbattle.server.game.GameFinishedEvent;
 import com.cardbattle.server.game.GameService;
 import com.cardbattle.server.pack.PackCatalog;
@@ -12,6 +13,7 @@ import org.springframework.stereotype.Service;
 
 import java.security.SecureRandom;
 import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,7 +29,8 @@ public class RoomService {
 
     /** 헷갈리는 글자(0/O, 1/I)를 뺀 초대 코드 문자 */
     private static final String CODE_CHARS = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-    private static final String DEFAULT_PACK = "sample";
+    /** 설정한 기본 팩이 하나도 없을 때 (공개 저장소에 항상 있는 팩) */
+    private static final String FALLBACK_PACK = "sample";
 
     public record RoomSummary(String inviteCode, int memberCount, int maxPlayers, RoomStatus status,
                               String hostNickname) {
@@ -38,21 +41,23 @@ public class RoomService {
     private final PackCatalog packs;
     private final AccessGuard guard;
     private final SimpMessagingTemplate messaging;
+    private final AppProperties props;
     private final SecureRandom random = new SecureRandom();
     private final Map<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     public RoomService(RoomRepository rooms, GameService games, PackCatalog packs, AccessGuard guard,
-                       SimpMessagingTemplate messaging) {
+                       SimpMessagingTemplate messaging, AppProperties props) {
         this.rooms = rooms;
         this.games = games;
         this.packs = packs;
         this.guard = guard;
         this.messaging = messaging;
+        this.props = props;
     }
 
     public Room create(Session host, RoomSettings.Request request, String accessCode, String clientKey) {
         guard.requireAccessCode(accessCode, clientKey);
-        RoomSettings settings = RoomSettings.from(request, DEFAULT_PACK);
+        RoomSettings settings = RoomSettings.from(request, defaultPack());
         packs.latest(settings.packCode())
                 .orElseThrow(() -> ApiException.badRequest("PACK_NOT_FOUND", "카드팩이 없습니다: " + settings.packCode()));
 
@@ -65,6 +70,13 @@ public class RoomService {
         room.getMembers().add(new RoomMember(host.playerId(), host.nickname(), System.currentTimeMillis()));
         rooms.save(room);
         return room;
+    }
+
+    /** 설정 순서대로 불러와 있는 첫 팩 (원작 팩이 없는 곳에서는 샘플 팩) */
+    private String defaultPack() {
+        List<String> candidates = props.rooms() == null || props.rooms().defaultPacks() == null
+                ? List.of() : props.rooms().defaultPacks();
+        return candidates.stream().filter(code -> packs.latest(code).isPresent()).findFirst().orElse(FALLBACK_PACK);
     }
 
     public RoomSummary summary(String inviteCode) {

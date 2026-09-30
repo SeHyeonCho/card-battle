@@ -10,7 +10,7 @@
 docker compose up -d                                  # PostgreSQL + Redis
 cd backend && ./gradlew :engine:test                  # 규칙 엔진 테스트 (서버 없이)
 cd backend && ./gradlew build                         # 전체 빌드
-cd backend && APP_ACCESS_CODE=test ./gradlew :server:bootRun   # 서버 :8080
+cd backend && ./gradlew :server:bootRun                        # 서버 :8080 (접근 코드 없음, 방은 원작 팩으로)
 cd frontend && npm run dev                            # 프론트 :5173 (/api, /ws 는 8080으로 프록시)
 cd frontend && npm run build && npm run lint          # 타입 검사 + 빌드 + oxlint
 python3 tools/gen_sfx.py                              # 효과음 다시 만들기
@@ -107,6 +107,9 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
   (`npm run dev -- --port 5174`). Vite는 기본적으로 `localhost`(IPv6)에만 떠서 `127.0.0.1` 로는 안 열린다.
+- 방 만들기: 첫 화면에서 접근 코드·카드팩 선택을 없앴다. 서버는 `app.access-code`(APP_ACCESS_CODE)가 비어 있으면 검사하지 않고,
+  카드팩은 `app.rooms.default-packs`(original → sample) 중 불러와 있는 첫 팩을 쓴다.
+  **공개 배포 전에는** APP_ACCESS_CODE 를 설정하고 첫 화면에 접근 코드 입력을 되살려야 한다 (`api.createRoom` 은 코드를 받을 수 있다).
 - 복구·방어 동작 확인 완료 (실제 서버 + 브라우저 2개):
   - 새로고침·탭 재오픈 → 같은 좌석·체력·A/D·필드·손패·차례로 복귀 (방 대기실도 복귀)
   - 턴 시간 초과 → `TURN_TIMED_OUT`, 무작위 1장 버리고 차례 넘어감

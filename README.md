@@ -37,7 +37,8 @@ cd backend
 ./gradlew :engine:test
 
 # 3. 서버 실행 (http://localhost:8080). 시작할 때 packs/sample 을 자동으로 DB에 넣는다
-APP_ACCESS_CODE=my-access-code ./gradlew :server:bootRun
+./gradlew :server:bootRun
+# 공개 서버로 띄울 때는 방 만들기에 접근 코드를 요구한다: APP_ACCESS_CODE=my-access-code ./gradlew :server:bootRun
 
 # 4. 프론트 실행 (다른 터미널)
 cd frontend
@@ -45,8 +46,8 @@ npm install
 npm run dev
 ```
 
-브라우저에서 http://localhost:5173 을 연다. 방장은 "방 만들기"에서 3번의 접근 코드를 입력하고,
-나온 초대 링크로 다른 플레이어가 참가한다.
+브라우저에서 http://localhost:5173 을 연다. 방장이 "방 만들기"로 방을 만들고, 나온 초대 링크로 다른 플레이어가 참가한다.
+카드팩은 서버 설정 `app.rooms.default-packs` 순서대로 불러와 있는 첫 팩을 쓴다 (기본: 비공개 팩이 있으면 그것, 없으면 `sample`).
 혼자 여러 명으로 테스트할 때는 세션이 origin(포트)별로 저장되므로 `npm run dev -- --port 5174` 처럼 포트를 달리해 하나 더 띄운다.
 
 **서버 없이 화면만 보고 싶으면** http://localhost:5173/?demo — 봇 3명과 카드 애니메이션·효과음을 확인할 수 있다.

@@ -33,8 +33,9 @@ export const api = {
   listPacks: (accessCode?: string) =>
     request<PackSummary[]>('GET', '/api/packs', undefined, accessCode ? { 'X-Access-Code': accessCode } : {}),
 
-  createRoom: (token: string, accessCode: string, settings: Partial<RoomSettings>) =>
-    request<Room>('POST', '/api/rooms', settings, { ...auth(token), 'X-Access-Code': accessCode }),
+  /** 카드팩을 보내지 않으면 서버 기본 팩(원작 팩이 있으면 원작, 없으면 샘플). 접근 코드는 서버가 요구할 때만 */
+  createRoom: (token: string, settings: Partial<RoomSettings>, accessCode?: string) =>
+    request<Room>('POST', '/api/rooms', settings, { ...auth(token), ...(accessCode ? { 'X-Access-Code': accessCode } : {}) }),
 
   /** 카드 ID → 효과음 주소. 카드별 소리가 없는 팩이면 빈 객체 */
   cardSounds: (packCode: string) => request<Record<string, string>>('GET', `/api/packs/${encodeURIComponent(packCode)}/sounds`),

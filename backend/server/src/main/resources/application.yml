@@ -19,8 +19,9 @@ server:
   port: 8080
 
 app:
-  # 방을 만들 때 필요한 서버 접근 코드. 실제 운영에서는 환경변수로 바꾼다
-  access-code: ${APP_ACCESS_CODE:change-me}
+  # 방을 만들 때 필요한 서버 접근 코드. 비워 두면 검사하지 않는다 (로컬·비공개 플레이).
+  # 공개 배포할 때는 환경변수 APP_ACCESS_CODE 로 반드시 설정한다
+  access-code: ${APP_ACCESS_CODE:}
   # 카드팩 import API 관리자 키
   admin-key: ${APP_ADMIN_KEY:change-me-admin}
   # WebSocket 접속을 허용할 Origin 패턴 (Vite 개발 서버, 5173이 사용 중이면 다른 포트로 뜬다)
@@ -28,6 +29,11 @@ app:
     - http://localhost:[*]
     - http://127.0.0.1:[*]
   session-ttl: 24h
+  rooms:
+    # 방을 만들 때 카드팩을 고르지 않으면 이 순서로 불러와 있는 첫 팩을 쓴다 (원작 팩이 없으면 샘플 팩)
+    default-packs:
+      - original
+      - sample
   packs:
     # 서버 시작 시 자동으로 불러올 카드팩 폴더 (backend/server 기준 상대 경로)
     # packs/original 은 원작 카드팩(gitignore, 로컬 전용). 폴더가 없으면 경고만 남기고 넘어간다
