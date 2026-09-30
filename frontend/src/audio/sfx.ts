@@ -9,11 +9,14 @@ import { Howl, Howler } from 'howler'
 export type SfxName = 'card' | 'hit' | 'heal' | 'turn' | 'eliminate' | 'win' | 'error' | 'click'
 
 const NAMES: SfxName[] = ['card', 'hit', 'heal', 'turn', 'eliminate', 'win', 'error', 'click']
+/** 효과음 전체 음량 배율. 모든 효과음(기본·카드 고유)에 곱한다 */
+const MASTER = 0.5
+/** 효과음별 상대 음량 (없으면 0.7) */
 const VOLUME: Partial<Record<SfxName, number>> = { card: 0.5, click: 0.4 }
 const MUTE_KEY = 'sfx-muted'
 
 const sounds = new Map<SfxName, Howl>(
-  NAMES.map((name) => [name, new Howl({ src: [`/sfx/${name}.wav`], volume: VOLUME[name] ?? 0.7, preload: true })]),
+  NAMES.map((name) => [name, new Howl({ src: [`/sfx/${name}.wav`], volume: (VOLUME[name] ?? 0.7) * MASTER, preload: true })]),
 )
 
 function readMuted(): boolean {
@@ -69,7 +72,7 @@ Howler.mute(muted)
 function howlFor(url: string): Howl {
   let howl = byUrl.get(url)
   if (!howl) {
-    howl = new Howl({ src: [url], format: ['mp3'], volume: 0.7 })
+    howl = new Howl({ src: [url], format: ['mp3'], volume: 0.7 * MASTER })
     byUrl.set(url, howl)
   }
   return howl
