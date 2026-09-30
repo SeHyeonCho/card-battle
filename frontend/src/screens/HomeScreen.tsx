@@ -70,38 +70,38 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
     })
 
   const nicknameOk = nickname.trim().length >= 2 && nickname.trim().length <= 12
-  const input = 'w-full rounded-lg border border-slate-700 bg-slate-900 px-3 py-2 outline-none focus:border-amber-400'
-  const primary = 'w-full rounded-lg bg-amber-500 py-2 font-bold text-slate-950 hover:bg-amber-400 disabled:opacity-40'
+  const input = 'field-input'
+  const primary = 'btn btn-orange w-full py-2'
 
   return (
     <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 p-6">
       <div className="text-center">
-        <h1 className="text-4xl font-black tracking-tight">카드 배틀</h1>
-        <p className="mt-1 text-slate-400">누적 데미지를 상대에게 떠넘겨라</p>
+        <h1 className="neon-gold text-5xl font-bold">카드 배틀</h1>
+        <p className="mt-3 text-sc-green">누적 데미지를 상대에게 떠넘겨라</p>
       </div>
 
       <section className="space-y-2">
-        <label className="text-sm text-slate-400">닉네임 (2~12자)</label>
+        <label className="text-sm text-sc-yellow">닉네임 (2~12자)</label>
         <input className={input} value={nickname} maxLength={12} onChange={(e) => setNickname(e.target.value)} placeholder="닉네임" />
       </section>
 
-      <section className="space-y-2 rounded-xl border border-slate-800 bg-slate-900/60 p-4">
-        <h2 className="font-bold">초대 코드로 참가</h2>
-        <input className={`${input} font-mono tracking-[0.3em] uppercase`} value={invite} maxLength={6} onChange={(e) => setInvite(e.target.value)} placeholder="ABC234" />
+      <section className="frame frame-blue space-y-3 p-4">
+        <h2 className="font-bold text-sky-200">초대 코드로 참가</h2>
+        <input className={`${input} tracking-[0.3em] uppercase`} value={invite} maxLength={6} onChange={(e) => setInvite(e.target.value)} placeholder="ABC234" />
         <button type="button" className={primary} disabled={busy || !nicknameOk || invite.trim().length !== 6} onClick={join}>
           참가하기
         </button>
       </section>
 
-      <section className="rounded-xl border border-slate-800 bg-slate-900/60 p-4">
+      <section className="frame frame-orange p-4">
         <button
           type="button"
-          className="flex w-full items-center gap-2 text-left font-bold"
+          className="flex w-full cursor-pointer items-center gap-2 text-left font-bold text-orange-200"
           aria-expanded={createOpen}
           aria-controls="create-room"
           onClick={() => setCreateOpen((open) => !open)}
         >
-          <span className="text-xs text-slate-400" aria-hidden>
+          <span className="text-xs text-orange-400" aria-hidden>
             {createOpen ? '▼' : '▶'}
           </span>
           방 만들기 (방장)
@@ -109,11 +109,11 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
         <div id="create-room" className="mt-3 space-y-3" hidden={!createOpen}>
           <div className="flex gap-2">
             <input ref={accessCodeInput} className={input} type="password" value={accessCode} onChange={(e) => setAccessCode(e.target.value)} placeholder="서버 접근 코드" />
-            <button type="button" className="shrink-0 rounded-lg bg-slate-800 px-3 text-sm hover:bg-slate-700" onClick={loadPacks} disabled={busy}>
+            <button type="button" className="btn shrink-0 text-sm" onClick={loadPacks} disabled={busy}>
               팩 불러오기
             </button>
           </div>
-          <label className="block text-sm text-slate-400">
+          <label className="block space-y-1 text-sm text-sc-yellow">
             카드팩
             <select className={input} value={packCode} onChange={(e) => setPackCode(e.target.value)}>
               {packs.length === 0 && <option value="sample">sample (기본)</option>}
@@ -124,7 +124,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
               ))}
             </select>
           </label>
-          <div className="grid grid-cols-3 gap-2 text-sm text-slate-400">
+          <div className="grid grid-cols-3 gap-2 text-sm text-sc-yellow [&_label]:space-y-1 [&_select]:mt-1">
             <label>
               최대 인원
               <select className={input} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))}>
@@ -162,7 +162,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
         </div>
       </section>
 
-      <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-slate-300">
+      <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-sc-yellow">
         서버 없이 게임 화면 미리보기
       </a>
     </div>

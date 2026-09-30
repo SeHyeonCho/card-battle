@@ -1,14 +1,167 @@
 @import "tailwindcss";
 
-@theme {
-  --font-sans: "Pretendard", system-ui, -apple-system, "Segoe UI", "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+/*
+ * 화면 테마: 스타크래프트 유즈맵 감성 (원작 카드 그림과 맞춘 레트로 스타일).
+ * 글꼴은 갈무리(Galmuri, SIL OFL 1.1) — 카드 그림 속 도트 글씨와 비슷하다.
+ */
+@font-face {
+  font-family: Galmuri11;
+  font-weight: 400;
+  font-display: swap;
+  src: url("../node_modules/galmuri/dist/Galmuri11.woff2") format("woff2");
+}
+@font-face {
+  font-family: Galmuri11;
+  font-weight: 700;
+  font-display: swap;
+  src: url("../node_modules/galmuri/dist/Galmuri11-Bold.woff2") format("woff2");
 }
 
-html, body, #root {
+@theme {
+  --font-sans: "Galmuri11", "Apple SD Gothic Neo", "Malgun Gothic", monospace;
+  /* 카드 종류와 같은 테두리 색 */
+  --color-rim-orange: #f08a2c;
+  --color-rim-blue: #6aa7e8;
+  --color-rim-green: #43c24a;
+  --color-rim-purple: #b27ae0;
+  --color-rim-steel: #5b6474;
+  --color-rim-gold: #ffd84a;
+  --color-sc-yellow: #ffd84a;
+  --color-sc-green: #57e36a;
+}
+
+html,
+body,
+#root {
   height: 100%;
 }
 
 body {
-  @apply bg-slate-950 text-slate-100 antialiased;
-  background-image: radial-gradient(ellipse at top, #1e293b 0%, #020617 70%);
+  @apply text-slate-100;
+  /* 우주 배경: 별 몇 개 + 가운데가 밝은 남색 */
+  background-color: #05070d;
+  background-image:
+    radial-gradient(1px 1px at 12% 20%, #ffffff90, transparent),
+    radial-gradient(1px 1px at 70% 30%, #ffffff70, transparent),
+    radial-gradient(1.5px 1.5px at 40% 80%, #ffffff80, transparent),
+    radial-gradient(1px 1px at 85% 70%, #ffffff60, transparent),
+    radial-gradient(1px 1px at 25% 60%, #ffffff50, transparent),
+    radial-gradient(1.5px 1.5px at 92% 12%, #ffffff70, transparent),
+    radial-gradient(ellipse at 50% 35%, #1b2a44 0%, #05070d 75%);
+  background-attachment: fixed;
+}
+
+@layer components {
+  /* 금속 틀: 카드 테두리처럼 바깥 어두운 선 + 안쪽 밝은 선 + 은은한 빛 */
+  .frame {
+    --rim: var(--color-rim-steel);
+    --rim-dark: #1a1e26;
+    --rim-light: #9aa3b3;
+    --glow: #00000000;
+    border: 3px solid var(--rim);
+    box-shadow:
+      0 0 0 2px var(--rim-dark),
+      inset 0 0 0 2px var(--rim-light),
+      0 0 18px var(--glow);
+    background: #0b0e14e6;
+  }
+  .frame-orange {
+    --rim: var(--color-rim-orange);
+    --rim-dark: #5a1200;
+    --rim-light: #ffb466;
+    --glow: #ff6a0055;
+    background: #1b0a06e6;
+  }
+  .frame-blue {
+    --rim: var(--color-rim-blue);
+    --rim-dark: #0b2a55;
+    --rim-light: #a8d0ff;
+    --glow: #3a8cff44;
+    background: #06101fe6;
+  }
+  .frame-green {
+    --rim: var(--color-rim-green);
+    --rim-dark: #0b3a10;
+    --rim-light: #a6f0a0;
+    --glow: #3cff4a33;
+    background: #06140ae6;
+  }
+  .frame-purple {
+    --rim: var(--color-rim-purple);
+    --rim-dark: #2c0b4a;
+    --rim-light: #dcb8ff;
+    --glow: #b04aff44;
+    background: #120820e6;
+  }
+  .frame-gold {
+    --rim: var(--color-rim-gold);
+    --rim-dark: #4a3500;
+    --rim-light: #fff0a8;
+    --glow: #ffd84a88;
+  }
+  .frame-red {
+    --rim: #ff5a5a;
+    --rim-dark: #4a0000;
+    --rim-light: #ffb0b0;
+    --glow: #ff2a2a88;
+  }
+
+  /* 버튼: 금속 틀 + 위에서 아래로 어두워지는 판 */
+  .btn {
+    @apply cursor-pointer px-3 py-1.5 font-bold text-white transition select-none disabled:cursor-not-allowed disabled:opacity-40;
+    border: 2px solid var(--color-rim-steel);
+    background: linear-gradient(#3a414f, #1a1e26);
+    box-shadow: inset 0 0 0 1px #9aa3b3;
+    text-shadow: 1px 1px #000;
+  }
+  .btn:not(:disabled):hover {
+    filter: brightness(1.25);
+  }
+  .btn:not(:disabled):active {
+    transform: translateY(1px);
+  }
+  .btn-orange {
+    border-color: var(--color-rim-orange);
+    background: linear-gradient(#7a2a0c, #2a0802);
+    box-shadow: inset 0 0 0 1px #ffb466, 0 0 10px #ff6a0040;
+  }
+  .btn-green {
+    border-color: var(--color-rim-green);
+    background: linear-gradient(#1f6a24, #062a0a);
+    box-shadow: inset 0 0 0 1px #a6f0a0, 0 0 10px #3cff4a30;
+  }
+  .btn-red {
+    border-color: #ff5a5a;
+    background: linear-gradient(#8a1616, #2a0404);
+    box-shadow: inset 0 0 0 1px #ffb0b0, 0 0 10px #ff2a2a40;
+  }
+
+  /* 입력칸: 검은 화면에 금속 테두리 */
+  .field-input {
+    @apply w-full px-3 py-2 text-slate-100 outline-none placeholder:text-slate-600;
+    background: #000;
+    border: 2px solid var(--color-rim-steel);
+    box-shadow: inset 0 0 0 1px #000, inset 2px 2px 0 #00000080;
+  }
+  .field-input:focus {
+    border-color: var(--color-rim-gold);
+  }
+
+  /* 네온 숫자 (현재 공격력·누적 데미지) */
+  .neon-blue {
+    color: #7fd3ff;
+    text-shadow: 3px 3px #000, 0 0 12px #3aa0ff;
+  }
+  .neon-red {
+    color: #ff5a5a;
+    text-shadow: 3px 3px #000, 0 0 14px #ff2a2a;
+  }
+  .neon-gold {
+    color: var(--color-sc-yellow);
+    text-shadow: 3px 3px #000, 0 0 14px #ffb400;
+  }
+
+  .text-outline {
+    text-shadow: 1px 1px #000, -1px 1px #000, 1px -1px #000, -1px -1px #000;
+  }
 }

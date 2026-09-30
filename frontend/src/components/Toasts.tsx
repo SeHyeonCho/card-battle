@@ -12,7 +12,7 @@ export function Toasts() {
             initial={{ y: -20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
             exit={{ y: -20, opacity: 0 }}
-            className="rounded-lg border border-rose-400/40 bg-slate-900/95 px-4 py-2 text-sm shadow-lg"
+            className="border border-rim-steel bg-black/90 px-4 py-2 text-sm text-sc-yellow text-outline"
           >
             {t.text}
           </motion.div>

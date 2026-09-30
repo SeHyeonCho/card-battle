@@ -96,6 +96,9 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
   원작 팩이 있으면 카드별 효과음 59개와 카드 그림 145장을 등록해 `/api/packs/{code}/sounds`, `/images` 로 제공한다.
+- 화면 테마: 스타크래프트 유즈맵 감성 (원작 카드 그림과 맞춤). 도트 글꼴 갈무리(`galmuri`, SIL OFL), 우주 배경,
+  카드 테두리 같은 금속 틀. 공통 스타일은 `frontend/src/index.css` 의 `frame`/`frame-{orange,blue,green,purple,gold,red}`,
+  `btn`/`btn-{orange,green,red}`, `field-input`, `neon-{blue,red,gold}` 를 쓴다 (새 화면도 이것으로 맞춘다).
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다

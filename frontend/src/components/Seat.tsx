@@ -24,7 +24,16 @@ interface Props {
 export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targetable, onClick, defaultHandLimit, cardName, nickOf }: Props) {
   const hp = Math.max(0, player.hp)
   const ratio = Math.min(1, hp / Math.max(1, baseHp))
-  const barColor = hp > baseHp ? 'bg-sky-400' : ratio > 0.5 ? 'bg-emerald-400' : ratio > 0.25 ? 'bg-amber-400' : 'bg-rose-500'
+  const barColor =
+    hp > baseHp
+      ? 'bg-gradient-to-b from-sky-300 to-sky-600'
+      : ratio > 0.5
+        ? 'bg-gradient-to-b from-[#7dff6a] to-[#1f9c24]'
+        : ratio > 0.25
+          ? 'bg-gradient-to-b from-amber-300 to-amber-600'
+          : 'bg-gradient-to-b from-[#ff8a6a] to-[#c0241f]'
+  // 틀 색: 대상으로 고를 수 있음(빨강) > 지금 차례(금색) > 나(주황) > 다른 사람(파랑)
+  const frame = targetable ? 'frame-red' : isCurrent ? 'frame-gold' : isMe ? 'frame-orange' : 'frame-blue'
   const [scope, animate] = useAnimate<HTMLButtonElement>()
 
   useEffect(() => {
@@ -39,46 +48,44 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
       type="button"
       disabled={!targetable}
       onClick={onClick}
-      className={`relative w-40 rounded-xl border bg-slate-900/80 p-3 text-left transition ${
-        isCurrent ? 'border-amber-400 shadow-[0_0_24px_rgba(251,191,36,0.35)]' : 'border-slate-700'
-      } ${player.eliminated ? 'opacity-40 grayscale' : ''} ${
-        targetable ? 'cursor-pointer ring-2 ring-rose-400 hover:bg-rose-950/60' : 'cursor-default'
+      className={`frame ${frame} relative w-44 p-3 text-left text-sm transition ${player.eliminated ? 'opacity-40 grayscale' : ''} ${
+        targetable ? 'cursor-pointer hover:brightness-125' : 'cursor-default'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-semibold">
+        <span className="truncate font-bold text-white">
           {player.eliminated && '💀 '}
           {player.away && !player.eliminated && <span title="자리 비움 (연속 시간 초과)">💤 </span>}
           {player.nickname}
-          {isMe && <span className="ml-1 text-xs text-sky-300">(나)</span>}
+          {isMe && <span className="ml-1 text-xs text-orange-300">(나)</span>}
         </span>
-        <span className="shrink-0 text-xs text-slate-400" title="손패 수 / 손패 한도">
+        <span className="shrink-0 text-xs text-slate-300" title="손패 수 / 손패 한도">
           🂠 {player.handCount}
           {player.handLimit !== defaultHandLimit && <span className="text-amber-300">/{player.handLimit}</span>}
         </span>
       </div>
-      <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-700">
+      <div className="mt-2 h-2.5 overflow-hidden border border-slate-600 bg-black">
         <motion.div className={`h-full ${barColor}`} animate={{ width: `${ratio * 100}%` }} transition={{ duration: 0.4 }} />
       </div>
       <div className="mt-1 text-right tabular-nums">
-        <span className="text-lg font-bold text-slate-100">{hp}</span>
-        <span className="ml-1 text-xs text-slate-500">HP</span>
+        <span className="text-lg font-bold text-white">{hp}</span>
+        <span className="ml-1 text-xs text-slate-400">/ {baseHp}</span>
         {player.hpCap < baseHp && <span className="ml-1 text-[10px] text-rose-300">(최대 {player.hpCap})</span>}
       </div>
 
       {player.away && !player.eliminated && (
-        <div className="mt-1 rounded bg-slate-700/80 px-1.5 py-0.5 text-center text-[11px] text-slate-200">💤 자리 비움</div>
+        <div className="mt-1 border border-slate-500 bg-black/60 px-1.5 py-0.5 text-center text-[11px] text-slate-200">💤 자리 비움</div>
       )}
 
       {(player.curse || player.statuses.length > 0) && (
         <div className="mt-1 flex flex-wrap gap-1 text-[11px]">
           {player.curse && (
-            <span className="rounded bg-fuchsia-900/80 px-1.5 py-0.5 text-fuchsia-100" title={`저주를 건 사람: ${nickOf(player.curse.casterId)}`}>
+            <span className="border border-rim-purple bg-purple-950/90 px-1.5 py-0.5 text-purple-100" title={`저주를 건 사람: ${nickOf(player.curse.casterId)}`}>
               😈 {cardName(player.curse.cardId)}
             </span>
           )}
           {player.statuses.map((st) => (
-            <span key={st.status} className="rounded bg-sky-900/80 px-1.5 py-0.5 text-sky-100" title={STATUS_TEXT[st.status]?.label ?? st.status}>
+            <span key={st.status} className="border border-rim-blue bg-sky-950/90 px-1.5 py-0.5 text-sky-100" title={STATUS_TEXT[st.status]?.label ?? st.status}>
               {STATUS_TEXT[st.status]?.icon ?? '•'} {st.turnsLeft}
             </span>
           ))}
@@ -86,7 +93,7 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
       )}
 
       {!isMe && player.revealedHand && (
-        <div className="mt-1 rounded bg-black/40 px-1.5 py-1 text-[10px] leading-tight text-amber-100" title="지켜보고 있다: 손패 공개">
+        <div className="mt-1 border border-rim-gold/60 bg-black/60 px-1.5 py-1 text-[11px] leading-tight text-amber-100" title="지켜보고 있다: 손패 공개">
           👁 {player.revealedHand.map((c) => cardName(c.cardId)).join(', ')}
         </div>
       )}
@@ -99,7 +106,7 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
               initial={{ y: 0, opacity: 1, scale: 1.2 }}
               animate={{ y: -44, opacity: 0, scale: 1 }}
               transition={{ duration: 1.1, ease: 'easeOut' }}
-              className={`absolute text-xl font-black drop-shadow ${f.delta < 0 ? 'text-rose-400' : 'text-emerald-300'}`}
+              className={`absolute text-2xl font-bold ${f.delta < 0 ? 'neon-red' : 'text-sc-green text-outline'}`}
             >
               {f.delta > 0 ? `+${f.delta}` : f.delta}
             </motion.span>

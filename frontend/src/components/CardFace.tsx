@@ -1,12 +1,13 @@
 import { useApp } from '../store/app'
 import type { CardInfo } from '../types'
 
+/** 원작 카드처럼 종류별 테두리 색 (index.css 의 frame-*) */
 const STYLE: Record<CardInfo['category'], { label: string; className: string }> = {
-  ATTACK: { label: '공격', className: 'from-rose-700 to-orange-600 border-rose-400/70' },
-  SUPPORT: { label: '보조', className: 'from-sky-700 to-indigo-700 border-sky-400/70' },
-  BENEFIT: { label: '이득', className: 'from-emerald-700 to-teal-700 border-emerald-400/70' },
-  CURSE: { label: '저주', className: 'from-fuchsia-800 to-purple-800 border-fuchsia-400/70' },
-  MISC: { label: '기타', className: 'from-slate-600 to-slate-700 border-slate-400/70' },
+  ATTACK: { label: '공격', className: 'frame-orange' },
+  SUPPORT: { label: '보조', className: 'frame-blue' },
+  BENEFIT: { label: '이득', className: 'frame-green' },
+  CURSE: { label: '저주', className: 'frame-purple' },
+  MISC: { label: '기타', className: '' },
 }
 
 interface Props {
@@ -35,18 +36,18 @@ function ImageFace({ card, attack, size, image }: Props & { image: string }) {
       <img src={image} alt={card.name} draggable={false} className="h-full w-full select-none" />
       {shownAttack !== null && (
         <span
-          className={`absolute right-1 top-1 rounded-md bg-black/80 px-1.5 font-black leading-tight text-amber-200 ${big ? 'text-2xl' : 'text-lg'}`}
+          className={`neon-gold absolute right-1 top-1 border border-rim-gold bg-black/85 px-1.5 font-bold leading-tight ${big ? 'text-2xl' : 'text-lg'}`}
         >
           {shownAttack}
         </span>
       )}
       <div
-        className={`pointer-events-none absolute inset-x-[8%] top-[6%] flex h-[62%] flex-col justify-center rounded bg-black/85 p-2 text-left leading-snug text-white opacity-0 transition-opacity group-hover:opacity-100 ${
+        className={`pointer-events-none absolute inset-x-[8%] top-[6%] flex h-[62%] flex-col justify-center border border-white/30 bg-black/90 p-2 text-left leading-snug text-white opacity-0 transition-opacity group-hover:opacity-100 ${
           big ? 'text-xs' : 'text-[11px]'
         }`}
       >
         {card.description}
-        {card.flavor && <span className="mt-1 text-[10px] italic text-white/60">{card.flavor}</span>}
+        {card.flavor && <span className="mt-1 text-[11px] text-white/60">{card.flavor}</span>}
       </div>
     </div>
   )
@@ -60,19 +61,15 @@ function TextFace({ card, attack, size }: Props) {
 
   return (
     <div
-      className={`relative flex flex-col rounded-xl border-2 bg-gradient-to-br p-2 text-left shadow-lg shadow-black/40 ${style.className} ${
-        big ? 'h-56 w-40' : 'h-44 w-32'
-      }`}
+      className={`frame ${style.className} relative flex flex-col rounded-lg p-2 text-left ${big ? 'h-56 w-42' : 'h-44 w-33'}`}
     >
       <div className="flex items-start justify-between">
-        <span className="rounded bg-black/30 px-1.5 py-0.5 text-[10px] font-semibold tracking-wide">{style.label}</span>
-        {power !== null && (
-          <span className={`font-black leading-none text-amber-200 drop-shadow ${big ? 'text-4xl' : 'text-2xl'}`}>{power}</span>
-        )}
+        <span className="border border-white/30 bg-black/50 px-1.5 py-0.5 text-[11px]">{style.label}</span>
+        {power !== null && <span className={`neon-gold font-bold leading-none ${big ? 'text-4xl' : 'text-2xl'}`}>{power}</span>}
       </div>
-      <div className={`mt-2 font-bold leading-tight ${big ? 'text-lg' : 'text-sm'}`}>{card.name}</div>
+      <div className={`mt-2 font-bold leading-tight text-white text-outline ${big ? 'text-lg' : 'text-sm'}`}>{card.name}</div>
       <div className={`mt-auto leading-snug text-white/90 ${big ? 'text-xs' : 'text-[11px]'}`}>{card.description}</div>
-      {card.flavor && <div className="mt-1 text-[10px] italic text-white/60">{card.flavor}</div>}
+      {card.flavor && <div className="mt-1 text-[11px] text-white/60">{card.flavor}</div>}
     </div>
   )
 }

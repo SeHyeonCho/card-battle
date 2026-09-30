@@ -11,11 +11,11 @@ export function GameLog() {
   }, [log.length])
 
   return (
-    <div className="flex h-full flex-col rounded-xl border border-slate-800 bg-slate-900/60">
-      <div className="border-b border-slate-800 px-3 py-2 text-xs font-semibold tracking-wide text-slate-400">게임 로그</div>
-      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-sm">
-        {log.map((entry) => (
-          <div key={entry.id} className="text-slate-300">
+    <div className="frame flex h-full flex-col bg-black/80">
+      <div className="border-b border-rim-steel px-3 py-2 text-xs text-sc-yellow">[게임 로그]</div>
+      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-[13px] leading-relaxed">
+        {log.map((entry, i) => (
+          <div key={entry.id} className={i === log.length - 1 ? 'text-white' : 'text-slate-400'}>
             {entry.text}
           </div>
         ))}

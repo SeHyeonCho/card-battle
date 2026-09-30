@@ -12,13 +12,13 @@ export function ResultOverlay({ game, onClose }: { game: GameView; onClose: () =
         initial={{ scale: 0.7, y: 30 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-        className="w-full max-w-sm rounded-2xl border border-amber-400/50 bg-slate-900 p-6 text-center shadow-2xl"
+        className={`frame w-full max-w-sm p-6 text-center ${iWon && !game.draw ? 'frame-gold' : 'frame-blue'}`}
       >
         <div className="text-5xl">{game.draw ? '🤝' : iWon ? '🏆' : '💀'}</div>
-        <h2 className="mt-2 text-2xl font-black">{game.draw ? '무승부' : iWon ? '승리!' : '게임 종료'}</h2>
+        <h2 className={`mt-3 text-3xl font-bold ${iWon && !game.draw ? 'neon-gold' : 'neon-blue'}`}>{game.draw ? '무승부' : iWon ? '승리!' : '게임 종료'}</h2>
         <ol className="mt-4 space-y-1 text-left">
           {ranking.map((r) => (
-            <li key={r.playerId} className="flex justify-between rounded-lg bg-slate-800/70 px-3 py-2">
+            <li key={r.playerId} className={`flex justify-between border bg-black/70 px-3 py-2 ${r.rank === 1 && !game.draw ? 'border-rim-gold text-sc-yellow' : 'border-rim-steel'}`}>
               <span>
                 {r.rank}위 · {r.nickname}
                 {r.playerId === game.viewerId && <span className="ml-1 text-xs text-sky-300">(나)</span>}
@@ -27,7 +27,7 @@ export function ResultOverlay({ game, onClose }: { game: GameView; onClose: () =
             </li>
           ))}
         </ol>
-        <button type="button" onClick={onClose} className="mt-5 w-full rounded-lg bg-amber-500 py-2 font-bold text-slate-950 hover:bg-amber-400">
+        <button type="button" onClick={onClose} className="btn btn-orange mt-5 w-full py-2">
           대기실로
         </button>
       </motion.div>

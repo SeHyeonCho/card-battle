@@ -34,7 +34,7 @@ export function GameScreen() {
   const [muted, setMuted] = useState(sfx.muted())
 
   if (!game) {
-    return <div className="flex h-full items-center justify-center text-slate-400">게임 불러오는 중...</div>
+    return <div className="flex h-full items-center justify-center text-sc-yellow">게임 불러오는 중...</div>
   }
 
   const me = game.players.find((p) => p.playerId === game.viewerId)
@@ -89,24 +89,24 @@ export function GameScreen() {
 
   return (
     <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between gap-4 border-b border-slate-800 px-4 py-2 text-sm">
+      <header className="flex items-center justify-between gap-4 border-b-2 border-rim-steel bg-gradient-to-b from-[#2a2f3a] to-[#14171d] px-4 py-2 text-sm shadow-[inset_0_-1px_#000]">
         <div className="flex items-center gap-3">
-          <span className="font-bold">턴 {game.turnNumber}</span>
-          <span className="text-slate-400">방향 {game.direction > 0 ? '→' : '←'}</span>
-          <span className={myTurn ? 'font-bold text-amber-300' : 'text-slate-300'}>
-            {game.status === 'FINISHED' ? '게임 종료' : myTurn ? '내 차례!' : `${current?.nickname ?? '?'}의 차례`}
+          <span className="font-bold text-sc-yellow text-outline">턴 {game.turnNumber}</span>
+          <span className="text-slate-300">방향 {game.direction > 0 ? '→' : '←'}</span>
+          <span className={myTurn ? 'font-bold text-sc-yellow text-outline' : 'text-slate-200'}>
+            {game.status === 'FINISHED' ? '게임 종료' : myTurn ? '▶ 내 차례!' : `${current?.nickname ?? '?'}의 차례`}
           </span>
         </div>
         <div className="flex items-center gap-3">
-          {demo && <span className="rounded bg-fuchsia-700/60 px-2 py-0.5 text-xs">미리보기 모드</span>}
-          {!demo && <span className={connected ? 'text-emerald-400' : 'text-rose-400'}>{connected ? '● 연결됨' : '● 재연결 중'}</span>}
+          {demo && <span className="border border-rim-purple bg-purple-950 px-2 py-0.5 text-xs">미리보기 모드</span>}
+          {!demo && <span className={connected ? 'text-sc-green' : 'text-rose-400'}>{connected ? '● 연결됨' : '● 재연결 중'}</span>}
           <button
             type="button"
             onClick={() => {
               sfx.setMuted(!muted)
               setMuted(!muted)
             }}
-            className="rounded px-2 py-1 hover:bg-slate-800"
+            className="btn px-2 py-0.5"
             title="효과음 켜기/끄기"
           >
             {muted ? '🔇' : '🔊'}
@@ -137,7 +137,7 @@ export function GameScreen() {
                   nickOf={nickOf}
                 />
                 {isHost && p.away && !p.eliminated && game.status === 'IN_PROGRESS' && (
-                  <button type="button" onClick={() => kick(p.playerId)} className="rounded bg-rose-800 px-2 py-0.5 text-xs text-rose-50 hover:bg-rose-700">
+                  <button type="button" onClick={() => kick(p.playerId)} className="btn btn-red px-2 py-0.5 text-xs">
                     강퇴
                   </button>
                 )}
@@ -167,17 +167,15 @@ export function GameScreen() {
               <button
                 type="button"
                 onClick={() => setDiscardMode(!discardMode)}
-                className={`rounded-lg px-4 py-2 text-sm font-semibold ${
-                  discardMode ? 'bg-rose-600 text-white' : 'bg-slate-800 text-slate-200 hover:bg-slate-700'
-                }`}
+                className={`btn px-4 py-2 text-sm ${discardMode ? 'btn-red' : 'btn-orange'}`}
               >
                 {discardMode ? '버리기 취소' : extra ? '한 장 버리고 끝내기' : '카드 버리기'}
               </button>
             )}
             {targeting && (
-              <div className="flex items-center gap-2 rounded-lg bg-rose-950/70 px-3 py-2 text-sm">
-                <span>[{targeting.card.name}] 대상을 고르세요</span>
-                <button type="button" onClick={() => setTargeting(null)} className="rounded bg-slate-800 px-2 py-1 hover:bg-slate-700">
+              <div className="frame frame-red flex items-center gap-2 px-3 py-2 text-sm">
+                <span className="text-rose-100">[{targeting.card.name}] 대상을 고르세요</span>
+                <button type="button" onClick={() => setTargeting(null)} className="btn px-2 py-0.5">
                   취소
                 </button>
               </div>
@@ -185,7 +183,7 @@ export function GameScreen() {
           </div>
 
           {extra && (
-            <div className="rounded-lg bg-amber-900/60 px-4 py-2 text-sm text-amber-100">
+            <div className="frame frame-gold px-4 py-2 text-sm text-amber-100">
               ➕{' '}
               {extra.discardOnly
                 ? '낼 수 있는 카드가 없어 한 장을 버려야 합니다'
@@ -193,7 +191,7 @@ export function GameScreen() {
             </div>
           )}
           {discarding && (
-            <div className="text-sm text-rose-300">
+            <div className="text-sm text-rose-300 text-outline">
               {extra ? '버릴 카드를 누르세요. 지금까지 낸 카드로 판정합니다.' : '버릴 카드를 누르세요. 누적 데미지가 있으면 받습니다.'}
             </div>
           )}
@@ -220,16 +218,16 @@ export function GameScreen() {
                     disabled={!playable}
                     className={`relative ${playable ? 'cursor-pointer' : 'cursor-not-allowed'} ${myTurn ? '' : 'opacity-70'} ${
                       blocked ? 'opacity-45 grayscale' : ''
-                    } ${discarding ? 'ring-2 ring-rose-500 rounded-xl' : ''}`}
+                    } ${discarding ? 'shadow-[0_0_0_3px_#ff5a5a,0_0_16px_#ff2a2a] rounded-lg' : ''}`}
                   >
                     <CardFace card={card} />
                     {myTurn && !discarding && playability?.playable && playability.forcedTargetId && (
-                      <span className="absolute inset-x-1 bottom-1 rounded bg-black/80 px-1 py-0.5 text-center text-[10px] text-fuchsia-200">
+                      <span className="absolute inset-x-1 bottom-1 border border-rim-purple bg-black/90 px-1 py-0.5 text-center text-[11px] text-purple-200">
                         대상: {playability.forcedTargetId === game.viewerId ? '나' : nickOf(playability.forcedTargetId)}
                       </span>
                     )}
                     {blocked && playability?.reason && (
-                      <span className="absolute inset-x-1 bottom-1 rounded bg-black/80 px-1 py-0.5 text-center text-[10px] text-rose-300">
+                      <span className="absolute inset-x-1 bottom-1 border border-rose-500 bg-black/90 px-1 py-0.5 text-center text-[11px] text-rose-300">
                         {REASON_TEXT[playability.reason] ?? playability.message}
                       </span>
                     )}
