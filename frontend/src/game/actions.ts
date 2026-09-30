@@ -1,6 +1,7 @@
 import { createDemo } from '../demo/demoGame'
 import { send } from '../net/connection'
 import { useApp } from '../store/app'
+import type { RoomSettings } from '../types'
 import { uid } from '../util'
 
 /** 화면에서 부르는 행동들. 서버(또는 ?demo 모드의 가짜 서버)로 보낸다 */
@@ -51,10 +52,16 @@ export function startGame() {
   if (room) send(`/app/rooms/${room.roomId}/start`, {})
 }
 
-/** 방장: 자리 비움인 참가자 강퇴 (PRD 4.3) */
+/** 방장: 참가자 강퇴 — 대기실에서는 누구나(FR-ROOM-05), 게임 중에는 자리 비움인 사람만 (PRD 4.3) */
 export function kickPlayer(playerId: string) {
   const room = useApp.getState().room
   if (room) send(`/app/rooms/${room.roomId}/kick`, { playerId })
+}
+
+/** 방장: 대기실에서 설정 바꾸기 (FR-ROOM-05). 준 값만 바뀐다 */
+export function updateRoomSettings(settings: Partial<RoomSettings>) {
+  const room = useApp.getState().room
+  if (room) send(`/app/rooms/${room.roomId}/settings`, { settings })
 }
 
 export function leaveRoom() {

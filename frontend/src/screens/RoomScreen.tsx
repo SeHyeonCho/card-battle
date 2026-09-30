@@ -1,7 +1,9 @@
-import { leaveRoom, setReady, startGame } from '../game/actions'
+import { kickPlayer, leaveRoom, setReady, startGame, updateRoomSettings } from '../game/actions'
+import { MAX_PLAYER_OPTIONS, STARTING_HP_OPTIONS, TURN_TIME_OPTIONS, hpCapFor } from '../roomOptions'
 import { useApp } from '../store/app'
+import type { RoomMember } from '../types'
 
-/** 대기실: 초대 링크, 참가자, 준비, 시작 (PRD 6.2) */
+/** 대기실: 초대 링크, 참가자, 준비, 시작. 방장은 설정을 바꾸고 참가자를 내보낼 수 있다 (PRD 6.2, FR-ROOM-05) */
 export function RoomScreen() {
   const room = useApp((s) => s.room)
   const session = useApp((s) => s.session)
@@ -15,6 +17,12 @@ export function RoomScreen() {
   const allReady = room.members.every((m) => m.ready || m.playerId === room.hostId)
   const canStart = isHost && room.members.length >= 2 && allReady && room.status === 'LOBBY'
   const inviteLink = `${location.origin}/?invite=${room.inviteCode}`
+
+  function kick(member: RoomMember) {
+    if (window.confirm(`${member.nickname}님을 내보낼까요? 내보낸 사람은 이 방에 다시 들어올 수 없습니다.`)) {
+      kickPlayer(member.playerId)
+    }
+  }
 
   async function copyLink() {
     try {
@@ -50,20 +58,83 @@ export function RoomScreen() {
                 {m.nickname}
                 {m.playerId === session.playerId && <span className="ml-1 text-xs text-sky-300">(나)</span>}
               </span>
-              <span className={`text-sm ${m.playerId === room.hostId ? 'text-sc-yellow' : m.ready ? 'text-sc-green' : 'text-slate-500'}`}>
-                {m.playerId === room.hostId ? '방장' : m.ready ? '준비 완료' : '대기 중'}
+              <span className="flex items-center gap-2">
+                <span className={`text-sm ${m.playerId === room.hostId ? 'text-sc-yellow' : m.ready ? 'text-sc-green' : 'text-slate-500'}`}>
+                  {m.playerId === room.hostId ? '방장' : m.ready ? '준비 완료' : '대기 중'}
+                </span>
+                {isHost && m.playerId !== session.playerId && room.status === 'LOBBY' && (
+                  <button type="button" onClick={() => kick(m)} className="btn btn-red px-2 py-0.5 text-xs" title="방에서 내보내기">
+                    내보내기
+                  </button>
+                )}
               </span>
             </li>
           ))}
         </ul>
       </section>
 
-      <section className="grid grid-cols-4 gap-2 text-center text-xs text-sc-yellow">
-        <Info label="카드팩" value={room.settings.packCode} />
-        <Info label="시작 체력" value={String(room.settings.startingHp)} />
-        <Info label="손패" value={`${room.settings.handSize}장`} />
-        <Info label="턴 시간" value={`${room.settings.turnTimeSeconds}초`} />
-      </section>
+      {isHost && room.status === 'LOBBY' ? (
+        <section className="frame frame-orange space-y-2 p-4">
+          <h2 className="text-sm font-bold text-orange-200">방 설정 (바꾸면 참가자의 준비가 풀립니다)</h2>
+          <div className="grid grid-cols-3 gap-2 text-sm text-sc-yellow [&_label]:space-y-1">
+            <label>
+              최대 인원
+              <select
+                className="field-input mt-1"
+                value={room.settings.maxPlayers}
+                onChange={(e) => updateRoomSettings({ maxPlayers: Number(e.target.value) })}
+              >
+                {MAX_PLAYER_OPTIONS.map((n) => (
+                  <option key={n} value={n} disabled={n < room.members.length}>
+                    {n}명
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              시작 체력
+              <select
+                className="field-input mt-1"
+                value={room.settings.startingHp}
+                onChange={(e) => {
+                  const startingHp = Number(e.target.value)
+                  updateRoomSettings({ startingHp, hpCap: hpCapFor(startingHp) })
+                }}
+              >
+                {STARTING_HP_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <label>
+              턴 시간
+              <select
+                className="field-input mt-1"
+                value={room.settings.turnTimeSeconds}
+                onChange={(e) => updateRoomSettings({ turnTimeSeconds: Number(e.target.value) })}
+              >
+                {TURN_TIME_OPTIONS.map((n) => (
+                  <option key={n} value={n}>
+                    {n}초
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className="text-xs text-slate-400">
+            카드팩 {room.settings.packCode} · 손패 {room.settings.handSize}장
+          </div>
+        </section>
+      ) : (
+        <section className="grid grid-cols-4 gap-2 text-center text-xs text-sc-yellow">
+          <Info label="카드팩" value={room.settings.packCode} />
+          <Info label="시작 체력" value={String(room.settings.startingHp)} />
+          <Info label="손패" value={`${room.settings.handSize}장`} />
+          <Info label="턴 시간" value={`${room.settings.turnTimeSeconds}초`} />
+        </section>
+      )}
 
       {room.status === 'IN_GAME' && <div className="text-center text-sc-yellow">게임이 진행 중입니다. 불러오는 중...</div>}
 

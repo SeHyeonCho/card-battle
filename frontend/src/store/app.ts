@@ -4,7 +4,7 @@ import { sfx } from '../audio/sfx'
 import { createFxQueue } from '../game/fxQueue'
 import { fromSnapshot, logFromHistory, reduce, type Fx, type GameView } from '../game/reduce'
 import { send, subscribeGame, subscribeRoom, unsubscribeGame, unsubscribeRoom, type RoomMessage } from '../net/connection'
-import type { GameSnapshot, Room, ServerMessage, Session } from '../types'
+import type { GameSnapshot, Room, RoomSettings, ServerMessage, Session } from '../types'
 import { readStorage, writeStorage } from '../util'
 
 type Screen = 'home' | 'room' | 'game'
@@ -69,6 +69,8 @@ export const INVITE_KEY = 'last-invite'
 const LOG_LIMIT = 50
 
 let nextId = 1
+
+const sameSettings = (a: RoomSettings, b: RoomSettings) => JSON.stringify(a) === JSON.stringify(b)
 
 export const useApp = create<AppState>((set, get) => {
   /**
@@ -189,8 +191,12 @@ export const useApp = create<AppState>((set, get) => {
         writeStorage(INVITE_KEY, null)
         resetFx()
         set({ screen: 'home', room: null, game: null, log: [] })
-        get().toast('방장이 자리 비움으로 강퇴했습니다')
+        get().toast('방장이 방에서 내보냈습니다')
         return
+      }
+      const before = get().room
+      if (before && before.roomId === room.roomId && room.hostId !== session?.playerId && !sameSettings(before.settings, room.settings)) {
+        get().toast('방장이 방 설정을 바꿨습니다. 확인하고 다시 준비해 주세요')
       }
       set({ room })
       if (room.status === 'IN_GAME' && room.gameId && game?.gameId !== room.gameId) {

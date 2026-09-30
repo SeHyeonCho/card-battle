@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ApiError, api } from '../api/http'
+import { MAX_PLAYER_OPTIONS, STARTING_HP_OPTIONS, TURN_TIME_OPTIONS, hpCapFor } from '../roomOptions'
 import { useApp } from '../store/app'
 
 /** 첫 화면: 닉네임 → 초대 코드로 참가 또는 방 만들기 (PRD 4.2) */
@@ -47,7 +48,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
     run(async () => {
       const s = await ensureSession()
       // 카드팩은 서버 기본 팩을 쓴다 (원작 팩이 있으면 원작)
-      enterRoom(await api.createRoom(s.token, { maxPlayers, startingHp, hpCap: Math.max(500, startingHp), turnTimeSeconds: turnTime }))
+      enterRoom(await api.createRoom(s.token, { maxPlayers, startingHp, hpCap: hpCapFor(startingHp), turnTimeSeconds: turnTime }))
     })
 
   const nicknameOk = nickname.trim().length >= 2 && nickname.trim().length <= 12
@@ -80,7 +81,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
           <label>
             최대 인원
             <select className={input} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))}>
-              {[2, 3, 4, 5, 6].map((n) => (
+              {MAX_PLAYER_OPTIONS.map((n) => (
                 <option key={n} value={n}>
                   {n}명
                 </option>
@@ -90,7 +91,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
           <label>
             시작 체력
             <select className={input} value={startingHp} onChange={(e) => setStartingHp(Number(e.target.value))}>
-              {[100, 200, 300, 500].map((n) => (
+              {STARTING_HP_OPTIONS.map((n) => (
                 <option key={n} value={n}>
                   {n}
                 </option>
@@ -100,7 +101,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
           <label>
             턴 시간
             <select className={input} value={turnTime} onChange={(e) => setTurnTime(Number(e.target.value))}>
-              {[15, 25, 40].map((n) => (
+              {TURN_TIME_OPTIONS.map((n) => (
                 <option key={n} value={n}>
                   {n}초
                 </option>
