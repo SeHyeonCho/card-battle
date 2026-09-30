@@ -96,7 +96,7 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 ## 현재 상태 (Phase 2 완료)
 
-- 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 151개 통과.
+- 엔진: Phase 2 효과까지 완료 (PRD 8.3 프리미티브 + CUSTOM 6종), 엔진 테스트 157개 통과.
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
   원작 팩이 있으면 카드별 효과음 59개와 카드 그림 145장을 등록해 `/api/packs/{code}/sounds`, `/images` 로 제공한다.
@@ -119,6 +119,11 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 자리 비움·강퇴 (PRD 4.3): 3번 연속 시간 초과 → `PLAYER_AWAY_CHANGED`, 방장이 `/app/rooms/{roomId}/kick` 으로 강퇴
   (게임에서 탈락 + 방에서 제외. 차례였던 사람이면 누적은 사라지고 다음 차례). 대기실 강퇴(FR-ROOM-05)는 아직 없음
 - 멈춰! 저주: 제출 가능 여부의 `forcedTargetId` 로 화면이 대상 선택 없이 바로 낸다
+- 차례 전환 (FR-GAME-10): 차례가 시작되면 `GameSettings.TURN_TRANSITION_MS`(1.5초) 동안 내기·버리기를 엔진이
+  `TURN_TRANSITION` 으로 거절하고, 턴 제한 시간은 전환이 끝난 뒤부터 센다. 화면은 차례 배너를 띄우고,
+  전환 중에 고른 카드는 전환이 끝나는 순간 낸다. 고정 시계를 쓰는 테스트는 `new GameEngine(pack, effects, clock, 0)`
+- 연출 큐 (FR-UI-09, `frontend/src/game/fxQueue.ts`): 숫자·손패는 이벤트를 받자마자 반영하고, 소리·떠오르는 숫자·
+  흔들기·로그·차례 배너는 이벤트 순서대로 한 장면씩 재생한다. 3장면 이상 밀리면 절반 속도, 8장면 이상이면 로그만 남긴다
 
 ## 다음 작업 순서
 
