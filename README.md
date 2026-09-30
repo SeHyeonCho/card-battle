@@ -112,3 +112,10 @@ PRIVATE 팩은 서버 접근 코드를 아는 사람만 선택할 수 있다. �
 | 서버: 세션, 방, STOMP, Redis CAS 저장, 턴 타이머, 카드팩 자동 import | ✅ 빌드·기동 확인, 2인 한 판 완주 확인 |
 | 프론트: 첫 화면, 대기실, 게임 화면, 애니메이션, 효과음, 미리보기 모드 | ✅ 빌드·린트 통과, 실제 서버 연동 확인 |
 | 게임 기록 DB 저장, 자리 비움 강퇴, seq 기반 재전송, 서버 여러 대 | ⏳ Phase 2~3 |
+
+## 음악·효과음·글꼴 출처
+
+- 대기 화면 배경음악: "Fluffing a Duck" Kevin MacLeod ([incompetech.com](https://incompetech.com))
+  Licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) — `frontend/public/bgm/lobby.mp3`
+- 효과음: `tools/gen_sfx.py` 로 직접 합성 (외부 음원 없음)
+- 글꼴: [갈무리(Galmuri)](https://github.com/quiple/galmuri), SIL Open Font License 1.1

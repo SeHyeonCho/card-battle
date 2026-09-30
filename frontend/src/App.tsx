@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react'
 import { api } from './api/http'
+import { bgm } from './audio/bgm'
 import { sfx } from './audio/sfx'
+import { BgmToggle } from './components/BgmToggle'
 import { Toasts } from './components/Toasts'
 import { startDemo } from './game/actions'
 import { connect, disconnect } from './net/connection'
@@ -29,9 +31,16 @@ export default function App() {
   const session = useApp((s) => s.session)
   const [booted, setBooted] = useState(() => DEMO || rejoinCode(useApp.getState().session !== null) === null)
 
-  // 버튼 클릭음: 화면의 버튼(.btn)을 누르면 딸깍. 카드는 카드 소리가 따로 나서 제외된다
+  // 배경음악: 첫 화면·대기실은 대기 곡, 게임 중에는 끈다
+  useEffect(() => {
+    bgm.play(screen === 'game' ? null : 'lobby')
+  }, [screen])
+
+  // 버튼 클릭음: 화면의 버튼(.btn)을 누르면 딸깍. 카드는 카드 소리가 따로 나서 제외된다.
+  // 브라우저는 첫 클릭 전까지 소리를 막으므로, 클릭할 때 멈춰 있던 배경음악도 이어 튼다
   useEffect(() => {
     const onClick = (e: MouseEvent) => {
+      bgm.resume()
       if (e.target instanceof Element && e.target.closest('button.btn:not(:disabled)')) sfx.play('click')
     }
     document.addEventListener('click', onClick)
@@ -86,6 +95,7 @@ export default function App() {
       {screen === 'home' && <HomeScreen initialInvite={INVITE_FROM_URL} />}
       {screen === 'room' && <RoomScreen />}
       {screen === 'game' && <GameScreen />}
+      {screen !== 'game' && <BgmToggle />}
       <Toasts />
     </>
   )

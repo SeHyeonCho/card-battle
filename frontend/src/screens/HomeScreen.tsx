@@ -56,7 +56,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
   const primary = 'btn btn-orange w-full py-2'
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 p-6">
+    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 px-6 pt-14 pb-6">
       <div className="text-center">
         <h1 className="neon-gold text-5xl font-bold">카드 배틀</h1>
         <p className="mt-3 text-sc-green">누적 데미지를 상대에게 떠넘겨라</p>
@@ -117,6 +117,17 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
       <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-sc-yellow">
         서버 없이 게임 화면 미리보기
       </a>
+
+      <p className="text-center text-[11px] leading-relaxed text-slate-500">
+        BGM: "Fluffing a Duck" Kevin MacLeod (
+        <a href="https://incompetech.com" target="_blank" rel="noreferrer" className="underline hover:text-sc-yellow">
+          incompetech.com
+        </a>
+        ) ·{' '}
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline hover:text-sc-yellow">
+          CC BY 4.0
+        </a>
+      </p>
     </div>
   )
 }

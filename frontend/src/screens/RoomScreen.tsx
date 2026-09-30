@@ -34,7 +34,7 @@ export function RoomScreen() {
   }
 
   return (
-    <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center gap-5 p-6">
+    <div className="mx-auto flex min-h-full max-w-lg flex-col justify-center gap-5 px-6 pt-14 pb-6">
       <div className="text-center">
         <div className="text-sm text-sc-green">초대 코드</div>
         <div className="neon-gold mt-1 text-5xl font-bold tracking-[0.3em]">{room.inviteCode}</div>

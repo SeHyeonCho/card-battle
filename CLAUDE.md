@@ -64,6 +64,10 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   카드 고유 소리가 나는 동안 카드 내기·맞음·회복 기본 소리는 건너뛰고, '내 차례' 소리는 카드 소리가 끝날 때까지
   (최대 1.5초) 미뤘다가 낸다 (`frontend/src/audio/sfx.ts`).
   버튼 클릭음(`click`)은 화면의 `button.btn` 을 누를 때 난다 (`App.tsx` 의 문서 클릭 리스너, 카드·좌석은 제외).
+- 배경음악 (`frontend/src/audio/bgm.ts`): 첫 화면·대기실은 `public/bgm/lobby.mp3`("Fluffing a Duck", Kevin MacLeod, **CC BY 4.0 —
+  출처 표시 필수**: README 와 첫 화면 아래에 적혀 있다), 게임 중은 아직 없음. 오른쪽 위 BGM 버튼으로 끄고 켠다 (localStorage).
+  새 곡을 넣으면 README 출처 목록도 고친다. 후보 검토 페이지는 로컬 `packs/original/assets/review/bgm.html`
+  (Kevin MacLeod 12곡·`tools/gen_bgm.py` 칩튠 3곡·원작 2곡)
 - 같은 방식으로 `assets/images/cards/manifest.json`(카드 ID → png/webp, 96×128)이 있으면 `/api/packs/{code}/images` 로 제공하고,
   화면은 카드를 그림으로 그린다 (마우스를 올리면 전체 효과 설명). 없으면 글자 카드. 원작 그림 파일은 로컬 전용.
 
