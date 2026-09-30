@@ -139,11 +139,11 @@ export function createDemo(emit: (message: ServerMessage) => void) {
     current = nextAlive(actor.seat).seat
     turn++
     const next = players[current]
-    e('TURN_STARTED', { playerId: next.playerId, turnNumber: turn, deadlineEpochMs: Date.now() + 25_000 })
+    e('TURN_STARTED', { playerId: next.playerId, turnNumber: turn, deadlineEpochMs: Date.now() + 26_500, transitionMs: 1500 })
     if (next.playerId === me) {
       e('PLAYABILITY_UPDATED', { cards: playability(next) })
     } else {
-      setTimeout(() => botMove(next), 1100)
+      setTimeout(() => botMove(next), 2300) // 차례 전환(1.5초)이 끝난 뒤에 낸다
     }
   }
 

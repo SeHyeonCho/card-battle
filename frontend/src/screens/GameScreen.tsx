@@ -1,14 +1,16 @@
 import { AnimatePresence, motion } from 'motion/react'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { sfx } from '../audio/sfx'
 import { CardFace } from '../components/CardFace'
 import { CenterBoard } from '../components/CenterBoard'
 import { GameLog } from '../components/GameLog'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Seat } from '../components/Seat'
+import { TurnBanner } from '../components/TurnBanner'
 import { TurnTimer } from '../components/TurnTimer'
 import { discardCard, kickPlayer, playCard } from '../game/actions'
 import { describeFilter, EXTRA_MODE_TEXT } from '../game/describe'
+import { useTurnTransition } from '../game/useTurnTransition'
 import { useApp } from '../store/app'
 import type { CardInfo, CardInstance } from '../types'
 
@@ -17,6 +19,17 @@ const REASON_TEXT: Record<string, string> = {
   FIELD_LOCK: '필드 효과로 봉인',
   CURSE_LOCK: '저주로 봉인',
   EXTRA_PLAY: '추가로 낼 수 없음',
+}
+
+/** 차례 전환 중에 골라 둔 행동. 전환이 끝나면 곧바로 보낸다 (FR-GAME-10) */
+type Pending = { turn: number; instanceId: string } & ({ kind: 'play'; targetId?: string } | { kind: 'discard' })
+
+function submit(action: Pending) {
+  if (action.kind === 'discard') {
+    discardCard(action.instanceId)
+  } else {
+    playCard(action.instanceId, action.targetId)
+  }
 }
 
 /** 게임 화면. 모든 숫자는 서버가 보낸 값을 그대로 보여준다 */
@@ -29,9 +42,25 @@ export function GameScreen() {
   const backToRoom = useApp((s) => s.backToRoom)
   const room = useApp((s) => s.room)
   const session = useApp((s) => s.session)
+  const banner = useApp((s) => s.banner)
   const [discardMode, setDiscardMode] = useState(false)
   const [targeting, setTargeting] = useState<{ instance: CardInstance; card: CardInfo } | null>(null)
   const [muted, setMuted] = useState(sfx.muted())
+  const [pending, setPending] = useState<Pending | null>(null)
+
+  // 차례 전환(FR-GAME-10): 전환 중에는 카드를 골라 두기만 하고, 전환이 끝나는 순간 낸다
+  const activeAt = game?.turnActiveAt ?? 0
+  const waiting = useTurnTransition(activeAt)
+  useEffect(() => {
+    if (!pending) return
+    const id = setTimeout(() => {
+      setPending(null)
+      const latest = useApp.getState().game
+      const stillMine = latest?.status === 'IN_PROGRESS' && latest.currentPlayerId === latest.viewerId
+      if (stillMine && latest.turnNumber === pending.turn) submit(pending)
+    }, Math.max(0, activeAt - Date.now()))
+    return () => clearTimeout(id)
+  }, [pending, activeAt])
 
   if (!game) {
     return <div className="flex h-full items-center justify-center text-sc-yellow">게임 불러오는 중...</div>
@@ -47,11 +76,24 @@ export function GameScreen() {
   const cardName = (cardId: string | null) => (cardId ? (game.cards[cardId]?.name ?? '?') : '?')
   const nickOf = (playerId: string) => game.players.find((p) => p.playerId === playerId)?.nickname ?? '?'
 
+  /** 전환 중이면 골라 두기만 하고, 아니면 바로 보낸다 */
+  function act(action: Pending) {
+    if (waiting) {
+      setPending(action)
+    } else {
+      submit(action)
+    }
+  }
+
   function onCardClick(instance: CardInstance) {
     if (!myTurn) return
+    if (pending?.instanceId === instance.instanceId) {
+      setPending(null) // 골라 둔 카드를 다시 누르면 취소
+      return
+    }
     const card = game!.cards[instance.cardId]
     if (discarding) {
-      discardCard(instance.instanceId)
+      act({ kind: 'discard', turn: game!.turnNumber, instanceId: instance.instanceId })
       setDiscardMode(false)
       return
     }
@@ -62,12 +104,12 @@ export function GameScreen() {
       setTargeting({ instance, card })
       return
     }
-    playCard(instance.instanceId)
+    act({ kind: 'play', turn: game!.turnNumber, instanceId: instance.instanceId })
   }
 
   function onSeatClick(playerId: string) {
     if (!targeting) return
-    playCard(targeting.instance.instanceId, playerId)
+    act({ kind: 'play', turn: game!.turnNumber, instanceId: targeting.instance.instanceId, targetId: playerId })
     setTargeting(null)
   }
 
@@ -115,7 +157,12 @@ export function GameScreen() {
       </header>
 
       <div className="px-4 pt-2">
-        <TurnTimer deadline={game.turnDeadlineEpochMs} totalSeconds={game.settings.turnTimeSeconds} active={game.status === 'IN_PROGRESS'} />
+        <TurnTimer
+          deadline={game.turnDeadlineEpochMs}
+          totalSeconds={game.settings.turnTimeSeconds}
+          active={game.status === 'IN_PROGRESS'}
+          waiting={game.status === 'IN_PROGRESS' && waiting}
+        />
       </div>
 
       <main className="grid flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr_260px]">
@@ -190,6 +237,11 @@ export function GameScreen() {
                 : `${EXTRA_MODE_TEXT[extra.mode]}${extra.filter ? ` · ${describeFilter(extra.filter)}만` : ''}`}
             </div>
           )}
+          {myTurn && waiting && (
+            <div className="text-sm text-sc-yellow text-outline">
+              {pending ? '골라 둔 카드를 차례가 넘어오는 대로 냅니다 (다시 누르면 취소)' : '차례가 넘어오는 중 — 카드를 골라 두면 곧바로 냅니다'}
+            </div>
+          )}
           {discarding && (
             <div className="text-sm text-rose-300 text-outline">
               {extra ? '버릴 카드를 누르세요. 지금까지 낸 카드로 판정합니다.' : '버릴 카드를 누르세요. 누적 데미지가 있으면 받습니다.'}
@@ -204,13 +256,14 @@ export function GameScreen() {
                 const playability = game.playability[instance.instanceId]
                 const playable = myTurn && (discarding || playability?.playable === true)
                 const blocked = myTurn && !discarding && playability && !playability.playable
+                const isPending = pending?.instanceId === instance.instanceId
                 return (
                   <motion.button
                     type="button"
                     key={instance.instanceId}
                     layoutId={instance.instanceId}
                     initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    animate={{ opacity: 1, y: isPending ? -12 : 0 }}
                     exit={{ opacity: 0, y: 60, transition: { duration: 0.2 } }}
                     whileHover={playable ? { y: -14 } : undefined}
                     whileTap={playable ? { scale: 0.95 } : undefined}
@@ -218,10 +271,17 @@ export function GameScreen() {
                     disabled={!playable}
                     className={`relative ${playable ? 'cursor-pointer' : 'cursor-not-allowed'} ${myTurn ? '' : 'opacity-70'} ${
                       blocked ? 'opacity-45 grayscale' : ''
-                    } ${discarding ? 'shadow-[0_0_0_3px_#ff5a5a,0_0_16px_#ff2a2a] rounded-lg' : ''}`}
+                    } ${discarding ? 'shadow-[0_0_0_3px_#ff5a5a,0_0_16px_#ff2a2a] rounded-lg' : ''} ${
+                      isPending ? 'rounded-lg shadow-[0_0_0_3px_#ffd84a,0_0_18px_#ffb400]' : ''
+                    }`}
                   >
                     <CardFace card={card} />
-                    {myTurn && !discarding && playability?.playable && playability.forcedTargetId && (
+                    {isPending && (
+                      <span className="absolute inset-x-1 bottom-1 border border-rim-gold bg-black/90 px-1 py-0.5 text-center text-[11px] text-sc-yellow">
+                        {pending.kind === 'discard' ? '곧 버림' : '곧 냄'}
+                      </span>
+                    )}
+                    {myTurn && !discarding && !isPending && playability?.playable && playability.forcedTargetId && (
                       <span className="absolute inset-x-1 bottom-1 border border-rim-purple bg-black/90 px-1 py-0.5 text-center text-[11px] text-purple-200">
                         대상: {playability.forcedTargetId === game.viewerId ? '나' : nickOf(playability.forcedTargetId)}
                       </span>
@@ -242,6 +302,8 @@ export function GameScreen() {
           <GameLog />
         </aside>
       </main>
+
+      <TurnBanner banner={banner} viewerId={game.viewerId} nickOf={nickOf} />
 
       {game.status === 'FINISHED' && game.ranking && <ResultOverlay game={game} onClose={demo ? () => location.reload() : backToRoom} />}
     </div>

@@ -149,6 +149,10 @@ export interface GameSnapshot {
   myHand: CardInstance[]
   playability: CardPlayability[]
   turnDeadlineEpochMs: number
+  /** 차례 전환이 끝나는 시각 (서버 시계, FR-GAME-10) */
+  turnActiveFromEpochMs?: number
+  /** 스냅샷을 만든 순간 남은 전환 시간 (ms). 화면은 받은 순간부터 이만큼 기다린다 */
+  transitionRemainingMs?: number
   winnerIds: string[]
   packCode: string
   packVersion: number

@@ -43,6 +43,11 @@ export interface GameView {
   myHand: CardInstance[]
   playability: Record<string, CardPlayability>
   turnDeadlineEpochMs: number
+  /**
+   * 차례 전환이 끝나 카드를 낼 수 있게 되는 시각 (이 브라우저의 Date.now() 기준, FR-GAME-10).
+   * 서버 시계와 어긋나지 않도록 서버가 알려 준 "남은 전환 시간"을 받은 순간부터 잰다
+   */
+  turnActiveAt: number
   winnerIds: string[]
   ranking: RankingEntry[] | null
   draw: boolean
@@ -55,6 +60,8 @@ export type Fx =
   /** 카드를 냈을 때: 카드팩에 그 카드의 소리가 있으면 그것을, 없으면 기본 카드 소리를 낸다 */
   | { kind: 'cardSound'; cardId: string }
   | { kind: 'floater'; playerId: string; delta: number }
+  /** 차례 전환 배너: until(Date.now() 기준)까지 "누구의 차례"를 크게 띄운다 */
+  | { kind: 'turnBanner'; playerId: string; until: number }
   | { kind: 'shake'; playerId: string }
   | { kind: 'log'; text: string }
   | { kind: 'toast'; text: string }
@@ -70,7 +77,7 @@ const HP_CAUSE: Record<string, string> = {
   BASEBALL_BAT: '야구빠따 피해',
 }
 
-export function fromSnapshot(s: GameSnapshot): GameView {
+export function fromSnapshot(s: GameSnapshot, now = Date.now()): GameView {
   return {
     gameId: s.gameId,
     version: s.version,
@@ -92,6 +99,7 @@ export function fromSnapshot(s: GameSnapshot): GameView {
     myHand: s.myHand,
     playability: Object.fromEntries(s.playability.map((p) => [p.instanceId, p])),
     turnDeadlineEpochMs: s.turnDeadlineEpochMs,
+    turnActiveAt: now + (s.transitionRemainingMs ?? 0),
     winnerIds: s.winnerIds,
     ranking: null,
     draw: false,
@@ -111,7 +119,8 @@ export function logFromHistory(view: GameView, events: ServerMessage[]): string[
   return events.flatMap((e) => reduce(base, e).fx.flatMap((f) => (f.kind === 'log' ? [f.text] : [])))
 }
 
-export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx: Fx[] } {
+/** @param now 이벤트를 받은 시각. 전환 시간은 이때부터 잰다 */
+export function reduce(view: GameView, msg: ServerMessage, now = Date.now()): { view: GameView; fx: Fx[] } {
   if (msg.seq !== undefined && msg.seq <= view.lastSeq) {
     return { view, fx: [] } // 스냅샷에 이미 들어 있는 이벤트
   }
@@ -135,8 +144,10 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
         currentPlayerId: playerId,
         turnNumber: num(p.turnNumber),
         turnDeadlineEpochMs: num(p.deadlineEpochMs),
+        turnActiveAt: now + num(p.transitionMs),
         playability: playerId === view.viewerId ? next.playability : {},
       }
+      fx.push({ kind: 'turnBanner', playerId, until: now + num(p.transitionMs) })
       if (playerId === view.viewerId) {
         fx.push({ kind: 'sound', name: 'turn' })
       }
@@ -307,6 +318,11 @@ export function reduce(view: GameView, msg: ServerMessage): { view: GameView; fx
       fx.push({ kind: 'log', text: `🕳 게임에서 제외: ${((p.cardIds as string[]) ?? []).map(cardName).join(', ')}` })
       break
     case 'ACTION_REJECTED':
+      if (p.code === 'TURN_TRANSITION') {
+        // 화면도 전환이 끝날 때까지 기다렸다 내므로 드물다. 오류음 없이 안내만 한다
+        fx.push({ kind: 'toast', text: str(p.message) })
+        break
+      }
       fx.push({ kind: 'sound', name: 'error' }, { kind: 'toast', text: str(p.message) || str(p.code) })
       if (p.code === 'STALE_VERSION') {
         fx.push({ kind: 'resync' })
