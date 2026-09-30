@@ -26,11 +26,26 @@ function readMuted(): boolean {
 /** 카드별 소리: 주소 → Howl (처음 재생할 때 만든다) */
 const byUrl = new Map<string, Howl>()
 
+/**
+ * 카드 고유 소리가 나는 동안 덮지 않는 기본 소리. 카드를 내면 서버가 체력 변화·차례 넘김을 곧바로 이어 보내서
+ * 맞음·회복·차례 소리가 카드 소리와 겹친다. 탈락·승리·오류는 중요한 알림이라 그대로 낸다
+ */
+const YIELD_TO_CARD: ReadonlySet<SfxName> = new Set(['card', 'hit', 'heal', 'turn'])
+/** 처음 재생하는 카드 소리는 불러오는 동안 playing()이 거짓이라, 시작 직후 잠깐은 재생 중으로 본다 */
+const CARD_START_GRACE_MS = 600
+let cardSound: { howl: Howl; startedAt: number } | null = null
+
+function cardSoundPlaying(): boolean {
+  if (!cardSound) return false
+  return cardSound.howl.playing() || Date.now() - cardSound.startedAt < CARD_START_GRACE_MS
+}
+
 let muted = readMuted()
 Howler.mute(muted)
 
 export const sfx = {
   play(name: SfxName) {
+    if (YIELD_TO_CARD.has(name) && cardSoundPlaying()) return
     sounds.get(name)?.play()
   },
   playUrl(url: string) {
@@ -40,6 +55,7 @@ export const sfx = {
       byUrl.set(url, howl)
     }
     howl.play()
+    cardSound = { howl, startedAt: Date.now() }
   },
   muted: () => muted,
   setMuted(value: boolean) {
