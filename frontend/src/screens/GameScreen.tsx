@@ -2,6 +2,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { useEffect, useState } from 'react'
 import { sfx } from '../audio/sfx'
 import { CardFace } from '../components/CardFace'
+import { BgmToggle } from '../components/BgmToggle'
 import { CenterBoard } from '../components/CenterBoard'
 import { GameLog } from '../components/GameLog'
 import { ResultOverlay } from '../components/ResultOverlay'
@@ -153,6 +154,7 @@ export function GameScreen() {
           >
             {muted ? '🔇' : '🔊'}
           </button>
+          <BgmToggle />
         </div>
       </header>
 

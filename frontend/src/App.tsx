@@ -31,10 +31,10 @@ export default function App() {
   const session = useApp((s) => s.session)
   const [booted, setBooted] = useState(() => DEMO || rejoinCode(useApp.getState().session !== null) === null)
 
-  // 배경음악: 첫 화면·대기실은 대기 곡, 게임 중에는 끈다
+  // 배경음악: 지금은 첫 화면·대기실·게임 모두 같은 곡 (카드 고유 소리가 날 때는 잠깐 멈춘다)
   useEffect(() => {
-    bgm.play(screen === 'game' ? null : 'lobby')
-  }, [screen])
+    bgm.play('lobby')
+  }, [])
 
   // 버튼 클릭음: 화면의 버튼(.btn)을 누르면 딸깍. 카드는 카드 소리가 따로 나서 제외된다.
   // 브라우저는 첫 클릭 전까지 소리를 막으므로, 클릭할 때 멈춰 있던 배경음악도 이어 튼다
@@ -95,7 +95,7 @@ export default function App() {
       {screen === 'home' && <HomeScreen initialInvite={INVITE_FROM_URL} />}
       {screen === 'room' && <RoomScreen />}
       {screen === 'game' && <GameScreen />}
-      {screen !== 'game' && <BgmToggle />}
+      {screen !== 'game' && <BgmToggle floating />}
       <Toasts />
     </>
   )

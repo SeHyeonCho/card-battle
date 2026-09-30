@@ -9,7 +9,7 @@ import { Howl } from 'howler'
 export type BgmName = 'lobby'
 
 const TRACKS: Record<BgmName, string> = {
-  lobby: '/bgm/lobby.mp3', // "Fluffing a Duck" Kevin MacLeod (incompetech.com), CC BY 4.0
+  lobby: '/bgm/lobby.mp3', // "Fluffing a Duck" Kevin MacLeod (incompetech.com), CC BY 4.0. 지금은 게임 중에도 이 곡
 }
 const VOLUME = 0.35
 const FADE_MS = 600
