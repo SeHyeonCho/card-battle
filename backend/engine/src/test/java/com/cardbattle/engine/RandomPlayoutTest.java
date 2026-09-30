@@ -35,7 +35,7 @@ class RandomPlayoutTest {
     @DisplayName("무작위 300판: 예외 없음, 불변 조건 유지, 대부분 정상 종료 (자리 비움·강퇴 포함)")
     void randomGamesKeepInvariants() {
         CardPack pack = TestCards.standardPack();
-        GameEngine engine = new GameEngine(pack, EffectRegistry.defaults(), TestGame.CLOCK);
+        GameEngine engine = new GameEngine(pack, EffectRegistry.defaults(), TestGame.CLOCK, 0);
         Random random = new Random(20260929L);
         int finished = 0;
         int kicks = 0;

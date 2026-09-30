@@ -26,7 +26,7 @@ class GameFlowTest {
             new PlayerSeed("c", "서연"), new PlayerSeed("d", "하늘"));
 
     private GameEngine engine() {
-        return new GameEngine(TestCards.standardPack(), EffectRegistry.defaults(), TestGame.CLOCK);
+        return new GameEngine(TestCards.standardPack(), EffectRegistry.defaults(), TestGame.CLOCK, 0);
     }
 
     @Test

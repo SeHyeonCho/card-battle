@@ -33,12 +33,15 @@ public final class TurnResolver {
     private final EffectRegistry effects;
     private final PlayabilityChecker playability;
     private final Clock clock;
+    private final int turnTransitionMs;
 
-    public TurnResolver(CardPack pack, EffectRegistry effects, PlayabilityChecker playability, Clock clock) {
+    public TurnResolver(CardPack pack, EffectRegistry effects, PlayabilityChecker playability, Clock clock,
+                        int turnTransitionMs) {
         this.pack = pack;
         this.effects = effects;
         this.playability = playability;
         this.clock = clock;
+        this.turnTransitionMs = turnTransitionMs;
     }
 
     // ------------------------------------------------------------------
@@ -361,11 +364,16 @@ public final class TurnResolver {
         state.setTurnNumber(state.getTurnNumber() + 1);
         PlayerState current = state.currentPlayer();
         int seconds = Passives.turnSeconds(current, state.getSettings().turnTimeSeconds());
-        state.setTurnDeadlineEpochMs(clock.millis() + seconds * 1000L);
+        // 전환 연출 동안은 낼 수 없고(FR-GAME-10), 제한 시간은 전환이 끝난 뒤부터 센다
+        long activeFrom = clock.millis() + turnTransitionMs;
+        state.setTurnActiveFromEpochMs(activeFrom);
+        state.setTurnDeadlineEpochMs(activeFrom + seconds * 1000L);
         events.toAll(EventType.TURN_STARTED, payload(
                 "playerId", current.getPlayerId(),
                 "turnNumber", state.getTurnNumber(),
-                "deadlineEpochMs", state.getTurnDeadlineEpochMs()));
+                "deadlineEpochMs", state.getTurnDeadlineEpochMs(),
+                "activeFromEpochMs", activeFrom,
+                "transitionMs", turnTransitionMs));
         events.toPlayer(current.getPlayerId(), EventType.PLAYABILITY_UPDATED,
                 payload("cards", playabilityOf(state, current)));
 

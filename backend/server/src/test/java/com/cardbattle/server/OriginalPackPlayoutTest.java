@@ -78,7 +78,7 @@ class OriginalPackPlayoutTest {
         List<String> errors = new PackValidator(EffectRegistry.defaults()).validate(pack);
         assertTrue(errors.isEmpty(), String.join("\n", errors));
 
-        GameEngine engine = new GameEngine(pack, EffectRegistry.defaults(), CLOCK);
+        GameEngine engine = new GameEngine(pack, EffectRegistry.defaults(), CLOCK, 0);
         Random random = new Random(20260929L);
         int finished = 0;
         int actions = 0;

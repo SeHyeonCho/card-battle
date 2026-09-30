@@ -54,6 +54,8 @@ public class GameState {
     private List<String> winnerIds = new ArrayList<>();
     /** 현재 턴 마감 시각 (epoch ms). 서버의 턴 타이머가 사용한다 */
     private long turnDeadlineEpochMs;
+    /** 차례 전환이 끝나 카드를 낼 수 있게 되는 시각 (epoch ms, FR-GAME-10) */
+    private long turnActiveFromEpochMs;
 
     public PlayerState player(String playerId) {
         for (PlayerState p : players) {
@@ -223,6 +225,14 @@ public class GameState {
 
     public void setTurnDeadlineEpochMs(long turnDeadlineEpochMs) {
         this.turnDeadlineEpochMs = turnDeadlineEpochMs;
+    }
+
+    public long getTurnActiveFromEpochMs() {
+        return turnActiveFromEpochMs;
+    }
+
+    public void setTurnActiveFromEpochMs(long turnActiveFromEpochMs) {
+        this.turnActiveFromEpochMs = turnActiveFromEpochMs;
     }
 
     public List<FieldLock> getFieldLocks() {

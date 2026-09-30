@@ -54,16 +54,22 @@ public final class GameEngine {
     private final EffectRegistry effects;
     private final PlayabilityChecker playability;
     private final TurnResolver resolver;
+    private final Clock clock;
 
+    /** 실제 서버용: 시스템 시계, 차례 전환 시간 {@link GameSettings#TURN_TRANSITION_MS} */
     public GameEngine(CardPack pack) {
-        this(pack, EffectRegistry.defaults(), Clock.systemUTC());
+        this(pack, EffectRegistry.defaults(), Clock.systemUTC(), GameSettings.TURN_TRANSITION_MS);
     }
 
-    public GameEngine(CardPack pack, EffectRegistry effects, Clock clock) {
+    /**
+     * @param turnTransitionMs 차례 전환 시간 (FR-GAME-10). 시계를 고정하는 테스트는 0을 넘긴다
+     */
+    public GameEngine(CardPack pack, EffectRegistry effects, Clock clock, int turnTransitionMs) {
         this.pack = pack;
         this.effects = effects;
+        this.clock = clock;
         this.playability = new PlayabilityChecker(pack);
-        this.resolver = new TurnResolver(pack, effects, playability, clock);
+        this.resolver = new TurnResolver(pack, effects, playability, clock, turnTransitionMs);
     }
 
     public record StartResult(GameState state, List<GameEvent> events) {
@@ -422,6 +428,8 @@ public final class GameEngine {
                 myHand,
                 myTurn ? resolver.playabilityOf(state, viewer) : List.of(),
                 state.getTurnDeadlineEpochMs(),
+                state.getTurnActiveFromEpochMs(),
+                Math.max(0, state.getTurnActiveFromEpochMs() - clock.millis()),
                 List.copyOf(state.getWinnerIds()),
                 pack.code(),
                 pack.version(),
@@ -459,6 +467,9 @@ public final class GameEngine {
         }
         if (player != state.currentPlayer()) {
             return Rejection.of(RejectCode.NOT_YOUR_TURN, "내 차례가 아닙니다");
+        }
+        if (clock.millis() < state.getTurnActiveFromEpochMs()) {
+            return Rejection.of(RejectCode.TURN_TRANSITION, "차례가 넘어오는 중입니다. 잠시 후에 낼 수 있습니다");
         }
         return null;
     }

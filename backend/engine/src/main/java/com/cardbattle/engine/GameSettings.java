@@ -12,6 +12,11 @@ public record GameSettings(int startingHp, int hpCap, int handSize, int turnTime
     public static final int MAX_PLAYERS = 6;
     /** 이만큼 연속으로 시간 초과하면 "자리 비움"이 되고, 방장이 강퇴할 수 있다 (PRD 4.3) */
     public static final int AWAY_AFTER_TIMEOUTS = 3;
+    /**
+     * 차례가 넘어갈 때의 전환 시간 (PRD FR-GAME-10, 최대 2초). 이 동안 새 차례인 사람은 카드를 고를 수는 있지만
+     * 낼 수는 없다 (원작의 대기 텀). 턴 제한 시간은 전환이 끝난 뒤부터 센다
+     */
+    public static final int TURN_TRANSITION_MS = 1500;
 
     public GameSettings {
         if (ruleMode == null || ruleMode.isBlank()) {

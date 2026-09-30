@@ -34,7 +34,7 @@ final class TestGame {
 
     private TestGame(CardPack pack, String... playerIds) {
         this.pack = pack;
-        this.engine = new GameEngine(pack, EffectRegistry.defaults(), CLOCK);
+        this.engine = new GameEngine(pack, EffectRegistry.defaults(), CLOCK, 0);
         this.state = new GameState();
         state.setGameId("g1");
         state.setPackCode(pack.code());
