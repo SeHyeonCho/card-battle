@@ -21,7 +21,7 @@ import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.Consumer;
 
 /**
- * 방 생성·참가·준비·시작 (PRD 6.2).
+ * 방 생성·참가·준비·시작·설정 변경·강퇴 (PRD 6.2).
  * Phase 1은 서버 1대 기준이라 방 단위 락을 JVM 안에서 건다.
  */
 @Service
@@ -93,6 +93,9 @@ public class RoomService {
             if (room.member(session.playerId()) != null) {
                 return;
             }
+            if (room.kicked(session.playerId())) {
+                throw ApiException.forbidden("KICKED", "방장이 내보낸 방에는 다시 들어갈 수 없습니다");
+            }
             if (room.getStatus() == RoomStatus.IN_GAME) {
                 throw ApiException.conflict("GAME_IN_PROGRESS", "이미 게임이 진행 중인 방입니다");
             }
@@ -132,6 +135,34 @@ public class RoomService {
         });
     }
 
+    /**
+     * 방장이 대기실에서 설정을 바꾼다 (FR-ROOM-05). 요청에 없는 값은 그대로 두고,
+     * 최대 인원은 지금 인원보다 적게 할 수 없다. 설정이 바뀌면 참가자들의 준비를 푼다 (바뀐 설정을 보고 다시 준비하도록)
+     */
+    public Room updateSettings(String roomId, String playerId, RoomSettings.Request request) {
+        return update(roomId, room -> {
+            requireMember(room, playerId);
+            requireLobby(room);
+            if (!room.hostedBy(playerId)) {
+                throw ApiException.forbidden("NOT_HOST", "방장만 설정을 바꿀 수 있습니다");
+            }
+            RoomSettings next = room.getSettings().merge(request);
+            if (next.maxPlayers() < room.getMembers().size()) {
+                throw ApiException.badRequest("INVALID_SETTINGS",
+                        "최대 인원을 지금 인원(" + room.getMembers().size() + "명)보다 적게 할 수 없습니다");
+            }
+            if (!next.packCode().equals(room.getSettings().packCode())) {
+                packs.latest(next.packCode()).orElseThrow(
+                        () -> ApiException.badRequest("PACK_NOT_FOUND", "카드팩이 없습니다: " + next.packCode()));
+            }
+            if (next.equals(room.getSettings())) {
+                return;
+            }
+            room.setSettings(next);
+            room.getMembers().forEach(m -> m.setReady(false));
+        });
+    }
+
     /** 대기실에서 나가기. 게임 중 나가기는 Phase 1에서 지원하지 않는다 (시간 초과로 진행) */
     public void leave(String roomId, String playerId) {
         withLock(roomId, () -> {
@@ -155,11 +186,37 @@ public class RoomService {
     }
 
     /**
-     * 방장이 자리 비움(연속 시간 초과)인 참가자를 강퇴한다 (PRD 4.3, FR-GAME-07).
-     * 게임에서는 탈락 처리되고 방에서도 빠진다. 강퇴된 사람의 화면은 멤버 목록에서 자신이 빠진 것을 보고 처음 화면으로 간다.
+     * 방장이 참가자를 강퇴한다. 강퇴된 사람은 방에서 빠지고 이 방에 다시 들어올 수 없다.
+     * 강퇴된 사람의 화면은 멤버 목록에서 자신이 빠진 것을 보고 처음 화면으로 간다.
+     * <ul>
+     *   <li>대기실: 아무나 강퇴할 수 있다 (FR-ROOM-05)</li>
+     *   <li>게임 중: 자리 비움(연속 시간 초과)인 사람만, 게임에서는 탈락 처리된다 (PRD 4.3, FR-GAME-07)</li>
+     * </ul>
      */
     public void kick(String roomId, String hostId, String targetId) {
         Room room = requireRoom(roomId);
+        checkKick(room, hostId, targetId);
+        if (room.getStatus() == RoomStatus.LOBBY) {
+            update(roomId, fresh -> {
+                checkKick(fresh, hostId, targetId);
+                requireLobby(fresh); // 그 사이 게임이 시작됐으면 게임 중 강퇴 규칙을 따라야 한다
+                removeKicked(fresh, targetId);
+            });
+            return;
+        }
+        // 방 락을 잡기 전에 게임을 처리한다. 강퇴로 게임이 끝나면 onGameFinished가 방 락을 잡는데,
+        // 행동 처리(게임 락 → 방 락)와 반대 순서로 락을 잡으면 교착될 수 있다
+        if (!games.kick(room.getGameId(), hostId, targetId)) {
+            return; // 거절 사유(자리 비움이 아님 등)는 GameService가 방장에게 보냈다
+        }
+        withLock(roomId, () -> rooms.find(roomId).ifPresent(fresh -> {
+            removeKicked(fresh, targetId);
+            rooms.save(fresh);
+            broadcast(fresh);
+        }));
+    }
+
+    private static void checkKick(Room room, String hostId, String targetId) {
         if (!room.hostedBy(hostId)) {
             throw ApiException.forbidden("NOT_HOST", "방장만 강퇴할 수 있습니다");
         }
@@ -167,19 +224,13 @@ public class RoomService {
             throw ApiException.badRequest("INVALID_TARGET", "자기 자신은 강퇴할 수 없습니다");
         }
         requireMember(room, targetId);
-        if (room.getStatus() != RoomStatus.IN_GAME || room.getGameId() == null) {
-            throw ApiException.conflict("NOT_IN_GAME", "게임 중 자리 비움인 참가자만 강퇴할 수 있습니다");
+    }
+
+    private static void removeKicked(Room room, String targetId) {
+        room.getMembers().removeIf(m -> m.getPlayerId().equals(targetId));
+        if (!room.kicked(targetId)) {
+            room.getKickedIds().add(targetId);
         }
-        // 방 락을 잡기 전에 게임을 처리한다. 강퇴로 게임이 끝나면 onGameFinished가 방 락을 잡는데,
-        // 행동 처리(게임 락 → 방 락)와 반대 순서로 락을 잡으면 교착될 수 있다
-        if (!games.kick(room.getGameId(), hostId, targetId)) {
-            return; // 거절 사유는 GameService가 방장에게 보냈다
-        }
-        withLock(roomId, () -> rooms.find(roomId).ifPresent(fresh -> {
-            fresh.getMembers().removeIf(m -> m.getPlayerId().equals(targetId));
-            rooms.save(fresh);
-            broadcast(fresh);
-        }));
     }
 
     /** 게임이 끝나면 같은 멤버로 대기실에 돌아온다 (FR-ROOM-06) */

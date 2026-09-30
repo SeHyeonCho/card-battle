@@ -24,6 +24,10 @@ public class RoomMessageController {
     public record KickRequest(String playerId) {
     }
 
+    /** PRD 9.2: {settings} */
+    public record SettingsRequest(RoomSettings.Request settings) {
+    }
+
     private final RoomService rooms;
 
     public RoomMessageController(RoomService rooms) {
@@ -43,6 +47,11 @@ public class RoomMessageController {
     @MessageMapping("/rooms/{roomId}/leave")
     public void leave(@DestinationVariable String roomId, Principal principal) {
         rooms.leave(roomId, principal.getName());
+    }
+
+    @MessageMapping("/rooms/{roomId}/settings")
+    public void settings(@DestinationVariable String roomId, @Payload SettingsRequest request, Principal principal) {
+        rooms.updateSettings(roomId, principal.getName(), request.settings());
     }
 
     @MessageMapping("/rooms/{roomId}/kick")

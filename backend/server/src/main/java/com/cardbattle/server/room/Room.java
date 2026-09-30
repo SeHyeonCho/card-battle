@@ -17,6 +17,8 @@ public class Room {
     private List<RoomMember> members = new ArrayList<>();
     private String gameId;
     private long createdAt;
+    /** 방장이 강퇴한 사람. 이 방에는 다시 들어올 수 없다 (FR-ROOM-05, FR-GAME-07) */
+    private List<String> kickedIds = new ArrayList<>();
 
     public RoomMember member(String playerId) {
         return members.stream().filter(m -> m.getPlayerId().equals(playerId)).findFirst().orElse(null);
@@ -24,6 +26,10 @@ public class Room {
 
     public boolean hostedBy(String playerId) {
         return hostId != null && hostId.equals(playerId);
+    }
+
+    public boolean kicked(String playerId) {
+        return kickedIds.contains(playerId);
     }
 
     public String getRoomId() {
@@ -80,6 +86,14 @@ public class Room {
 
     public void setGameId(String gameId) {
         this.gameId = gameId;
+    }
+
+    public List<String> getKickedIds() {
+        return kickedIds;
+    }
+
+    public void setKickedIds(List<String> kickedIds) {
+        this.kickedIds = kickedIds == null ? new ArrayList<>() : new ArrayList<>(kickedIds);
     }
 
     public long getCreatedAt() {

@@ -5,7 +5,7 @@ import com.cardbattle.server.common.ApiException;
 
 import java.util.Set;
 
-/** 방 설정 (FR-ROOM-01). 범위를 벗어난 값은 방을 만들 때 거부한다. */
+/** 방 설정 (FR-ROOM-01). 범위를 벗어난 값은 방을 만들거나 바꿀 때 거부한다 (FR-ROOM-05). */
 public record RoomSettings(int maxPlayers, String packCode, int startingHp, int hpCap, int handSize,
                            int turnTimeSeconds) {
 
@@ -17,13 +17,21 @@ public record RoomSettings(int maxPlayers, String packCode, int startingHp, int 
     }
 
     public static RoomSettings from(Request r, String defaultPackCode) {
+        return new RoomSettings(4, defaultPackCode, 200, 500, 5, 25).merge(r);
+    }
+
+    /** 요청에 있는 값만 바꾼 새 설정 (대기실에서 설정을 바꿀 때, FR-ROOM-05). 비운 값은 지금 값을 그대로 쓴다 */
+    public RoomSettings merge(Request r) {
+        if (r == null) {
+            throw ApiException.badRequest("INVALID_SETTINGS", "바꿀 설정이 없습니다");
+        }
         RoomSettings s = new RoomSettings(
-                r.maxPlayers() == null ? 4 : r.maxPlayers(),
-                r.packCode() == null || r.packCode().isBlank() ? defaultPackCode : r.packCode(),
-                r.startingHp() == null ? 200 : r.startingHp(),
-                r.hpCap() == null ? 500 : r.hpCap(),
-                r.handSize() == null ? 5 : r.handSize(),
-                r.turnTimeSeconds() == null ? 25 : r.turnTimeSeconds());
+                r.maxPlayers() == null ? maxPlayers : r.maxPlayers(),
+                r.packCode() == null || r.packCode().isBlank() ? packCode : r.packCode(),
+                r.startingHp() == null ? startingHp : r.startingHp(),
+                r.hpCap() == null ? hpCap : r.hpCap(),
+                r.handSize() == null ? handSize : r.handSize(),
+                r.turnTimeSeconds() == null ? turnTimeSeconds : r.turnTimeSeconds());
         s.validate();
         return s;
     }
