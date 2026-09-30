@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api } from './api/http'
+import { sfx } from './audio/sfx'
 import { Toasts } from './components/Toasts'
 import { startDemo } from './game/actions'
 import { connect, disconnect } from './net/connection'
@@ -27,6 +28,15 @@ export default function App() {
   const screen = useApp((s) => s.screen)
   const session = useApp((s) => s.session)
   const [booted, setBooted] = useState(() => DEMO || rejoinCode(useApp.getState().session !== null) === null)
+
+  // 버튼 클릭음: 화면의 버튼(.btn)을 누르면 딸깍. 카드는 카드 소리가 따로 나서 제외된다
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.target instanceof Element && e.target.closest('button.btn:not(:disabled)')) sfx.play('click')
+    }
+    document.addEventListener('click', onClick)
+    return () => document.removeEventListener('click', onClick)
+  }, [])
 
   // ?demo: 서버 없이 게임 화면 미리보기
   useEffect(() => {

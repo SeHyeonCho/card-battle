@@ -6,13 +6,14 @@ import { Howl, Howler } from 'howler'
  * 브라우저는 사용자가 한 번 클릭하기 전까지 소리를 막는데, Howler가 첫 클릭 때 알아서 풀어준다.
  */
 
-export type SfxName = 'card' | 'hit' | 'heal' | 'turn' | 'eliminate' | 'win' | 'error'
+export type SfxName = 'card' | 'hit' | 'heal' | 'turn' | 'eliminate' | 'win' | 'error' | 'click'
 
-const NAMES: SfxName[] = ['card', 'hit', 'heal', 'turn', 'eliminate', 'win', 'error']
+const NAMES: SfxName[] = ['card', 'hit', 'heal', 'turn', 'eliminate', 'win', 'error', 'click']
+const VOLUME: Partial<Record<SfxName, number>> = { card: 0.5, click: 0.4 }
 const MUTE_KEY = 'sfx-muted'
 
 const sounds = new Map<SfxName, Howl>(
-  NAMES.map((name) => [name, new Howl({ src: [`/sfx/${name}.wav`], volume: name === 'card' ? 0.5 : 0.7, preload: true })]),
+  NAMES.map((name) => [name, new Howl({ src: [`/sfx/${name}.wav`], volume: VOLUME[name] ?? 0.7, preload: true })]),
 )
 
 function readMuted(): boolean {

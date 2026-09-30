@@ -160,4 +160,5 @@ if __name__ == "__main__":
     write("eliminate", picked["eliminate_2"])
     write("win", picked["win_3"])
     write("error", picked["error_1"])
+    write("click", picked["click_2"])
     print("wrote", sorted(p.name for p in OUT.glob("*.wav")))
