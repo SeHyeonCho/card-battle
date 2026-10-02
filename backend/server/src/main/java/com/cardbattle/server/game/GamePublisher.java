@@ -32,6 +32,14 @@ public class GamePublisher {
         }
     }
 
+    /** 이벤트 기록·버전과 상관없는 서버 메시지를 게임 참가자 모두에게 보낸다 (seq·version 없음, 예: PLAYER_CONNECTION) */
+    public void broadcast(String gameId, String type, Object payload) {
+        Map<String, Object> message = new LinkedHashMap<>();
+        message.put("type", type);
+        message.put("payload", payload);
+        messaging.convertAndSend("/topic/games/" + gameId, (Object) message);
+    }
+
     public void sendToPlayer(String gameId, String playerId, String type, Object payload) {
         Map<String, Object> message = new LinkedHashMap<>();
         message.put("type", type);

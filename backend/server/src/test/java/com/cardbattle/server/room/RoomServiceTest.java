@@ -95,7 +95,7 @@ class RoomServiceTest {
         final List<String> kicked = new ArrayList<>();
 
         FakeGames() {
-            super(null, null, null, null, null, null);
+            super(null, null, null, null, null, null, null);
         }
 
         @Override

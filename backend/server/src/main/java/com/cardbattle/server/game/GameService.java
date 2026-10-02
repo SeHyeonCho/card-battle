@@ -8,6 +8,7 @@ import com.cardbattle.engine.command.PlayCommand;
 import com.cardbattle.engine.result.ActionResult;
 import com.cardbattle.engine.result.Rejection;
 import com.cardbattle.engine.state.GameState;
+import com.cardbattle.engine.state.PlayerState;
 import com.cardbattle.server.common.ApiException;
 import com.cardbattle.server.pack.PackCatalog;
 import com.cardbattle.server.room.Room;
@@ -52,11 +53,13 @@ public class GameService {
     private final TurnTimers timers;
     private final StringRedisTemplate redis;
     private final ApplicationEventPublisher appEvents;
+    private final PlayerPresence presence;
     private final SecureRandom seeds = new SecureRandom();
     private final Map<String, ReentrantLock> locks = new ConcurrentHashMap<>();
 
     public GameService(GameRepository games, PackCatalog packs, GamePublisher publisher, TurnTimers timers,
-                       StringRedisTemplate redis, ApplicationEventPublisher appEvents) {
+                       StringRedisTemplate redis, ApplicationEventPublisher appEvents, PlayerPresence presence) {
+        this.presence = presence;
         this.games = games;
         this.packs = packs;
         this.publisher = publisher;
@@ -78,6 +81,7 @@ public class GameService {
             throw new IllegalStateException("게임을 저장하지 못했습니다: " + gameId);
         }
         games.appendEvents(gameId, start.events());
+        presence.watch(gameId, players.stream().map(PlayerSeed::playerId).toList());
         publisher.publish(gameId, start.events());
         timers.schedule(start.state());
         return gameId;
@@ -135,6 +139,12 @@ public class GameService {
             }
             publisher.sendToPlayer(gameId, playerId, "SNAPSHOT",
                     engineFor(state).snapshot(state, playerId, games.recentEvents(gameId, SNAPSHOT_HISTORY)));
+            // 연결 상태는 스냅샷(엔진 상태)에 없으니, 지금 끊겨 있는 사람을 바로 뒤에 알려 준다 (FR-UI-02)
+            presence.watch(gameId, List.of(playerId));
+            List<String> playerIds = state.getPlayers().stream().map(PlayerState::getPlayerId).toList();
+            for (String offline : presence.offlineAmong(playerIds)) {
+                publisher.sendToPlayer(gameId, playerId, PlayerPresence.MESSAGE_TYPE, PlayerPresence.payload(offline, false));
+            }
         });
     }
 
