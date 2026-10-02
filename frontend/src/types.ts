@@ -63,6 +63,10 @@ export interface PlayerView {
   revealedHand: CardInstance[] | null
   /** 자리 비움 (3번 연속 시간 초과). 방장이 강퇴할 수 있다 */
   away: boolean
+  /**
+   * 연결이 끊겼으면 false (FR-UI-02). 서버 스냅샷에는 없고 PLAYER_CONNECTION 메시지로만 바뀐다 — 없으면 연결된 것으로 본다
+   */
+  connected?: boolean
 }
 
 /** engine/state/FieldLock — 필드 카드가 거는 제출 제한 */

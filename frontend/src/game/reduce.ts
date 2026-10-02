@@ -222,6 +222,13 @@ export function reduce(view: GameView, msg: ServerMessage, now = Date.now()): { 
       fx.push({ kind: 'sound', name: 'eliminate' }, { kind: 'log', text })
       break
     }
+    case 'PLAYER_CONNECTION': {
+      // 서버가 연결 상태만 알리는 메시지 (seq·version 없음, 게임 기록에도 남지 않는다)
+      const connected = p.connected !== false
+      next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, connected })) }
+      fx.push({ kind: 'log', text: connected ? `🔌 ${nick(p.playerId)} 다시 연결됨` : `📡 ${nick(p.playerId)} 연결 끊김` })
+      break
+    }
     case 'PLAYER_AWAY_CHANGED': {
       const away = p.away === true
       next = { ...next, players: updatePlayer(p.playerId, (pl) => ({ ...pl, away })) }

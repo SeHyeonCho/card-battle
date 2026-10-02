@@ -42,19 +42,23 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
     }
   }, [shake, animate, scope])
 
+  // 연결 끊김 (FR-UI-02): 탈락한 사람은 표시하지 않는다
+  const offline = player.connected === false && !player.eliminated
+
   return (
     <button
       ref={scope}
       type="button"
       disabled={!targetable}
       onClick={onClick}
-      className={`frame ${frame} relative w-44 p-3 text-left text-sm transition ${player.eliminated ? 'opacity-40 grayscale' : ''} ${
+      className={`frame ${frame} relative w-44 p-3 text-left text-sm transition ${player.eliminated ? 'opacity-40 grayscale' : offline ? 'opacity-70' : ''} ${
         targetable ? 'cursor-pointer hover:brightness-125' : 'cursor-default'
       }`}
     >
       <div className="flex items-center justify-between gap-2">
         <span className="truncate font-bold text-white">
           {player.eliminated && '💀 '}
+          {offline && <span title="연결 끊김">📡 </span>}
           {player.away && !player.eliminated && <span title="자리 비움 (연속 시간 초과)">💤 </span>}
           {player.nickname}
           {isMe && <span className="ml-1 text-xs text-orange-300">(나)</span>}
@@ -72,6 +76,12 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
         <span className="ml-1 text-xs text-slate-400">/ {baseHp}</span>
         {player.hpCap < baseHp && <span className="ml-1 text-[10px] text-rose-300">(최대 {player.hpCap})</span>}
       </div>
+
+      {offline && (
+        <div className="mt-1 border border-rose-500 bg-black/70 px-1.5 py-0.5 text-center text-[11px] text-rose-300" title="좌석은 그대로이고 차례가 오면 턴 시간대로 진행됩니다">
+          📡 연결 끊김
+        </div>
+      )}
 
       {player.away && !player.eliminated && (
         <div className="mt-1 border border-slate-500 bg-black/60 px-1.5 py-0.5 text-center text-[11px] text-slate-200">💤 자리 비움</div>
