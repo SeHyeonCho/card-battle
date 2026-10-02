@@ -131,6 +131,9 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   강퇴된 사람은 `Room.kickedIds` 에 남아 같은 방에 다시 못 들어온다 (`KICKED`). 서버 테스트 `RoomServiceTest` 는
   Redis·STOMP 대신 메모리 가짜를 끼워 `RoomService` 를 직접 돌린다
 - 멈춰! 저주: 제출 가능 여부의 `forcedTargetId` 로 화면이 대상 선택 없이 바로 낸다
+- 좌석 연결 상태 (FR-UI-02, `server/game/PlayerPresence`): STOMP 연결·끊김으로 플레이어별 연결 수를 세고, 모두 끊긴 채
+  3초가 지나면 `PLAYER_CONNECTION {playerId, connected}` 를 게임에 알린다 (새로고침은 알리지 않음). 게임 규칙이 아니라
+  엔진 상태·버전 밖의 서버 메시지(seq 없음)이고, 재동기화 때는 스냅샷 뒤에 끊긴 사람을 다시 보낸다. 서버 1대 기준 메모리
 - 차례 전환 (FR-GAME-10): 차례가 시작되면 `GameSettings.TURN_TRANSITION_MS`(1.5초) 동안 내기·버리기를 엔진이
   `TURN_TRANSITION` 으로 거절하고, 턴 제한 시간은 전환이 끝난 뒤부터 센다. 화면은 차례 배너를 띄우고,
   전환 중에 고른 카드는 전환이 끝나는 순간 낸다. 고정 시계를 쓰는 테스트는 `new GameEngine(pack, effects, clock, 0)`
