@@ -50,7 +50,7 @@ interface AppState {
   cardSounds: Record<string, string>
   /** 카드 ID → 카드 그림 주소 (카드팩에 카드 그림이 있을 때, 없으면 글자 카드) */
   cardImages: Record<string, string>
-  /** 효과음·그림을 받아 둔 카드팩 */
+  /** 효과음·그림을 받아 둔 카드팩:게임 */
   assetsPack: string | null
 
   setSession: (session: Session | null) => void
@@ -77,19 +77,21 @@ export const useApp = create<AppState>((set, get) => {
    * 카드팩의 카드별 효과음·그림 주소를 한 번 받아 둔다.
    * 없거나 실패하면 기본 소리와 글자 카드를 쓴다 (없어도 게임은 된다)
    */
-  function loadPackAssets(packCode: string) {
-    if (get().assetsPack === packCode) return
-    set({ cardSounds: {}, cardImages: {}, assetsPack: packCode })
+  function loadPackAssets(packCode: string, gameId: string) {
+    const key = `${packCode}:${gameId}`
+    const token = get().session?.token
+    if (get().assetsPack === key || !token) return
+    set({ cardSounds: {}, cardImages: {}, assetsPack: key })
     api
-      .cardSounds(packCode)
+      .packAssets('sounds', packCode, token, gameId)
       .then((cardSounds) => {
-        if (get().assetsPack === packCode) set({ cardSounds })
+        if (get().assetsPack === key) set({ cardSounds })
       })
       .catch(() => {})
     api
-      .cardImages(packCode)
+      .packAssets('images', packCode, token, gameId)
       .then((cardImages) => {
-        if (get().assetsPack === packCode) set({ cardImages })
+        if (get().assetsPack === key) set({ cardImages })
       })
       .catch(() => {})
   }
@@ -220,7 +222,7 @@ export const useApp = create<AppState>((set, get) => {
         if (game.status === 'IN_PROGRESS' && (snapshot.transitionRemainingMs ?? 0) > 0) {
           fxQueue.push([{ kind: 'turnBanner', playerId: game.currentPlayerId, until: game.turnActiveAt }])
         }
-        loadPackAssets(snapshot.packCode)
+        loadPackAssets(snapshot.packCode, snapshot.gameId)
         return
       }
       const game = get().game

@@ -1,7 +1,11 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { ApiError, api } from '../api/http'
 import { MAX_PLAYER_OPTIONS, STARTING_HP_OPTIONS, TURN_TIME_OPTIONS, hpCapFor } from '../roomOptions'
 import { useApp } from '../store/app'
+import { readStorage, writeStorage } from '../util'
+
+/** 방장이 한 번 입력한 접근 코드를 이 브라우저에 기억해 둔다 */
+const ACCESS_CODE_KEY = 'access-code'
 
 /** 첫 화면: 닉네임 → 초대 코드로 참가 또는 방 만들기 (PRD 4.2) */
 export function HomeScreen({ initialInvite }: { initialInvite: string }) {
@@ -16,6 +20,16 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
   const [startingHp, setStartingHp] = useState(200)
   const [turnTime, setTurnTime] = useState(25)
   const [busy, setBusy] = useState(false)
+  // 서버가 접근 코드를 요구할 때만(공개 배포) 방 만들기에 입력칸을 보여 준다
+  const [accessCodeRequired, setAccessCodeRequired] = useState(false)
+  const [accessCode, setAccessCode] = useState(() => readStorage<string>(ACCESS_CODE_KEY) ?? '')
+
+  useEffect(() => {
+    api
+      .config()
+      .then((c) => setAccessCodeRequired(c.accessCodeRequired))
+      .catch(() => {})
+  }, [])
 
   async function run(action: () => Promise<void>) {
     setBusy(true)
@@ -48,7 +62,10 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
     run(async () => {
       const s = await ensureSession()
       // 카드팩은 서버 기본 팩을 쓴다 (원작 팩이 있으면 원작)
-      enterRoom(await api.createRoom(s.token, { maxPlayers, startingHp, hpCap: hpCapFor(startingHp), turnTimeSeconds: turnTime }))
+      const settings = { maxPlayers, startingHp, hpCap: hpCapFor(startingHp), turnTimeSeconds: turnTime }
+      const room = await api.createRoom(s.token, settings, accessCodeRequired ? accessCode.trim() : undefined)
+      if (accessCodeRequired) writeStorage(ACCESS_CODE_KEY, accessCode.trim())
+      enterRoom(room)
     })
 
   const nicknameOk = nickname.trim().length >= 2 && nickname.trim().length <= 12
@@ -77,6 +94,16 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
 
       <section className="frame frame-orange space-y-3 p-4">
         <h2 className="font-bold text-orange-200">방 만들기 (방장)</h2>
+        {accessCodeRequired && (
+          <input
+            className={input}
+            type="password"
+            value={accessCode}
+            onChange={(e) => setAccessCode(e.target.value)}
+            placeholder="서버 접근 코드"
+            autoComplete="off"
+          />
+        )}
         <div className="grid grid-cols-3 gap-2 text-sm text-sc-yellow [&_label]:space-y-1 [&_select]:mt-1">
           <label>
             최대 인원
@@ -109,7 +136,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
             </select>
           </label>
         </div>
-        <button type="button" className={primary} disabled={busy || !nicknameOk} onClick={create}>
+        <button type="button" className={primary} disabled={busy || !nicknameOk || (accessCodeRequired && !accessCode.trim())} onClick={create}>
           방 만들기
         </button>
       </section>

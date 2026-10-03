@@ -38,8 +38,17 @@ export const api = {
     request<Room>('POST', '/api/rooms', settings, { ...auth(token), ...(accessCode ? { 'X-Access-Code': accessCode } : {}) }),
 
   /** 카드 ID → 효과음 주소. 카드별 소리가 없는 팩이면 빈 객체 */
-  cardSounds: (packCode: string) => request<Record<string, string>>('GET', `/api/packs/${encodeURIComponent(packCode)}/sounds`),
-  cardImages: (packCode: string) => request<Record<string, string>>('GET', `/api/packs/${encodeURIComponent(packCode)}/images`),
+  /** 카드 ID → 효과음·그림 주소. 비공개 팩은 그 팩으로 게임 중인 참가자만 받는다 (세션 + gameId) */
+  packAssets: (kind: 'sounds' | 'images', packCode: string, token: string, gameId: string) =>
+    request<Record<string, string>>(
+      'GET',
+      `/api/packs/${encodeURIComponent(packCode)}/${kind}?gameId=${encodeURIComponent(gameId)}`,
+      undefined,
+      auth(token),
+    ),
+
+  /** 서버 설정: 방을 만들 때 접근 코드가 필요한지 */
+  config: () => request<{ accessCodeRequired: boolean }>('GET', '/api/config'),
 
   joinRoom: (token: string, inviteCode: string) =>
     request<Room>('POST', `/api/rooms/${encodeURIComponent(inviteCode)}/join`, undefined, auth(token)),
