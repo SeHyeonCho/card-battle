@@ -120,9 +120,12 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다
   (`npm run dev -- --port 5174`). Vite는 기본적으로 `localhost`(IPv6)에만 떠서 `127.0.0.1` 로는 안 열린다.
-- 방 만들기: 첫 화면에서 접근 코드·카드팩 선택을 없앴다. 서버는 `app.access-code`(APP_ACCESS_CODE)가 비어 있으면 검사하지 않고,
-  카드팩은 `app.rooms.default-packs`(original → sample) 중 불러와 있는 첫 팩을 쓴다.
-  **공개 배포 전에는** APP_ACCESS_CODE 를 설정하고 첫 화면에 접근 코드 입력을 되살려야 한다 (`api.createRoom` 은 코드를 받을 수 있다).
+- 방 만들기: 카드팩 선택 없음 — `app.rooms.default-packs`(original → sample) 중 불러와 있는 첫 팩. 서버는 `app.access-code`
+  (APP_ACCESS_CODE)가 비어 있으면 검사하지 않는다. `GET /api/config` 의 `accessCodeRequired` 가 참일 때만 첫 화면에 입력칸이 보인다.
+- 친구들과 플레이 (배포): `APP_ACCESS_CODE=… tools/serve.sh` — 화면 빌드 → docker compose → bootJar 실행(빌드된 화면을
+  `SPRING_WEB_RESOURCES_STATICLOCATIONS` 로 같은 주소에서 내보냄, 터널 Origin 허용, X-Forwarded 헤더 신뢰) → `cloudflared` 빠른 터널.
+  `--no-tunnel` 은 같은 와이파이·테스트용. 원작 리소스 보호(`PackAssetAccess`): 비공개 팩의 그림·소리 목록은 그 팩으로 게임 중인
+  참가자(X-Session-Token + gameId)만 받고, 파일은 목록이 준 HMAC 서명 주소(`?exp&sig`, 12시간, 키는 Redis `asset:secret`)로만 받는다.
 - 복구·방어 동작 확인 완료 (실제 서버 + 브라우저 2개):
   - 새로고침·탭 재오픈 → 같은 좌석·체력·A/D·필드·손패·차례로 복귀 (방 대기실도 복귀)
   - 턴 시간 초과 → `TURN_TIMED_OUT`, 무작위 1장 버리고 차례 넘어감
