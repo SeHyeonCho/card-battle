@@ -4,6 +4,7 @@ import { sfx } from '../audio/sfx'
 import { CardFace } from '../components/CardFace'
 import { BgmToggle } from '../components/BgmToggle'
 import { CenterBoard } from '../components/CenterBoard'
+import { ConfirmButton } from '../components/ConfirmButton'
 import { GameLog } from '../components/GameLog'
 import { ResultOverlay } from '../components/ResultOverlay'
 import { Seat } from '../components/Seat'
@@ -119,11 +120,6 @@ export function GameScreen() {
     playerId !== game.viewerId && (game.players.find((p) => p.playerId === playerId)?.statuses ?? []).some((st) => st.status === 'UNTARGETABLE')
   // 방장은 자리 비움(연속 시간 초과)인 참가자를 강퇴할 수 있다 (PRD 4.3)
   const isHost = !demo && room !== null && session !== null && room.hostId === session.playerId
-  const kick = (playerId: string) => {
-    if (window.confirm(`${nickOf(playerId)}님을 강퇴할까요? 강퇴하면 탈락 처리되고 방에서도 나가게 됩니다.`)) {
-      kickPlayer(playerId)
-    }
-  }
   const canTarget = (playerId: string, eliminated: boolean) =>
     targeting !== null &&
     !eliminated &&
@@ -186,9 +182,13 @@ export function GameScreen() {
                   nickOf={nickOf}
                 />
                 {isHost && p.away && !p.eliminated && game.status === 'IN_PROGRESS' && (
-                  <button type="button" onClick={() => kick(p.playerId)} className="btn btn-red px-2 py-0.5 text-xs">
-                    강퇴
-                  </button>
+                  <ConfirmButton
+                    label="강퇴"
+                    confirmLabel="정말 강퇴?"
+                    onConfirm={() => kickPlayer(p.playerId)}
+                    className="btn btn-red px-2 py-0.5 text-xs"
+                    title="강퇴하면 탈락 처리되고 방에서도 나가게 됩니다"
+                  />
                 )}
               </div>
             ))}

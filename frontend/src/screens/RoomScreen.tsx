@@ -1,7 +1,7 @@
 import { kickPlayer, leaveRoom, setReady, startGame, updateRoomSettings } from '../game/actions'
+import { ConfirmButton } from '../components/ConfirmButton'
 import { MAX_PLAYER_OPTIONS, STARTING_HP_OPTIONS, TURN_TIME_OPTIONS, hpCapFor } from '../roomOptions'
 import { useApp } from '../store/app'
-import type { RoomMember } from '../types'
 
 /** 대기실: 초대 링크, 참가자, 준비, 시작. 방장은 설정을 바꾸고 참가자를 내보낼 수 있다 (PRD 6.2, FR-ROOM-05) */
 export function RoomScreen() {
@@ -17,12 +17,6 @@ export function RoomScreen() {
   const allReady = room.members.every((m) => m.ready || m.playerId === room.hostId)
   const canStart = isHost && room.members.length >= 2 && allReady && room.status === 'LOBBY'
   const inviteLink = `${location.origin}/?invite=${room.inviteCode}`
-
-  function kick(member: RoomMember) {
-    if (window.confirm(`${member.nickname}님을 내보낼까요? 내보낸 사람은 이 방에 다시 들어올 수 없습니다.`)) {
-      kickPlayer(member.playerId)
-    }
-  }
 
   async function copyLink() {
     try {
@@ -63,9 +57,13 @@ export function RoomScreen() {
                   {m.playerId === room.hostId ? '방장' : m.ready ? '준비 완료' : '대기 중'}
                 </span>
                 {isHost && m.playerId !== session.playerId && room.status === 'LOBBY' && (
-                  <button type="button" onClick={() => kick(m)} className="btn btn-red px-2 py-0.5 text-xs" title="방에서 내보내기">
-                    내보내기
-                  </button>
+                  <ConfirmButton
+                    label="내보내기"
+                    confirmLabel="정말 내보내기?"
+                    onConfirm={() => kickPlayer(m.playerId)}
+                    className="btn btn-red px-2 py-0.5 text-xs"
+                    title="방에서 내보내기 (내보낸 사람은 이 방에 다시 들어올 수 없습니다)"
+                  />
                 )}
               </span>
             </li>

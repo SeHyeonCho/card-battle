@@ -18,6 +18,9 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 
 서버 없이 화면만 확인: http://localhost:5173/?demo
 
+서버만 다시 띄울 때는 **듣고 있는 프로세스만** 끈다: `kill $(lsof -ti tcp:8080 -sTCP:LISTEN)`.
+`lsof -ti :8080` 은 `/ws` 를 8080으로 중계하는 Vite 개발 서버(5173·5174)까지 잡아서 화면 서버가 같이 꺼진다.
+
 ## 구조와 절대 규칙
 
 - `backend/engine` 은 **순수 Java**. Spring·Redis·Jackson 등 어떤 라이브러리도 추가하지 않는다.
@@ -48,6 +51,8 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
 - 서버 → 클라이언트 게임 메시지는 항상 `{type, payload, seq?, version?}` 모양. 새 이벤트는 엔진 `EventType` 에 추가하고
   `frontend/src/game/reduce.ts` 에서 처리한다.
 - 코드 주석과 사용자에게 보이는 문구는 한국어.
+- 브라우저 `confirm()`/`alert()` 를 쓰지 않는다. 앱 내장 브라우저 등에서 막혀 항상 취소가 된다. 되돌릴 수 없는 행동은
+  `components/ConfirmButton.tsx`(두 번 누르기)를 쓴다.
 - 프론트: `tsconfig` 에 `erasableSyntaxOnly` 가 켜져 있어 TS `enum` 과 생성자 매개변수 속성을 쓸 수 없다 (문자열 유니언 사용).
 
 ## 저작권·데이터 규칙
