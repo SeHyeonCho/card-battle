@@ -7,27 +7,31 @@ export function ResultOverlay({ game, onClose }: { game: GameView; onClose: () =
   const iWon = game.winnerIds.includes(game.viewerId)
 
   return (
-    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-40 flex items-center justify-center bg-black/70 p-4">
+    <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="fixed inset-0 z-40 flex items-center justify-center bg-bg/80 p-4 backdrop-blur-sm">
       <motion.div
         initial={{ scale: 0.7, y: 30 }}
         animate={{ scale: 1, y: 0 }}
         transition={{ type: 'spring', stiffness: 220, damping: 18 }}
-        className={`frame w-full max-w-sm p-6 text-center ${iWon && !game.draw ? 'frame-gold' : 'frame-blue'}`}
+        className="panel w-full max-w-sm p-7 text-center shadow-[0_30px_80px_-20px_#000]"
       >
         <div className="text-5xl">{game.draw ? '🤝' : iWon ? '🏆' : '💀'}</div>
-        <h2 className={`mt-3 text-3xl font-bold ${iWon && !game.draw ? 'neon-gold' : 'neon-blue'}`}>{game.draw ? '무승부' : iWon ? '승리!' : '게임 종료'}</h2>
-        <ol className="mt-4 space-y-1 text-left">
+        <h2 className={`mt-3 text-3xl font-extrabold tracking-tight ${iWon && !game.draw ? 'text-accent' : 'text-ink'}`}>{game.draw ? '무승부' : iWon ? '승리!' : '게임 종료'}</h2>
+        <ol className="mt-5 space-y-1.5 text-left text-sm">
           {ranking.map((r) => (
-            <li key={r.playerId} className={`flex justify-between border bg-black/70 px-3 py-2 ${r.rank === 1 && !game.draw ? 'border-rim-gold text-sc-yellow' : 'border-rim-steel'}`}>
+            <li
+              key={r.playerId}
+              className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 ${r.rank === 1 && !game.draw ? 'bg-accent font-bold text-on-accent' : 'bg-raised'}`}
+            >
               <span>
-                {r.rank}위 · {r.nickname}
-                {r.playerId === game.viewerId && <span className="ml-1 text-xs text-sky-300">(나)</span>}
+                <b className="mr-2 tabular-nums">{r.rank}</b>
+                {r.nickname}
+                {r.playerId === game.viewerId && <span className="ml-1.5 text-xs opacity-70">나</span>}
               </span>
               {r.rank === 1 && !game.draw && <span>👑</span>}
             </li>
           ))}
         </ol>
-        <button type="button" onClick={onClose} className="btn btn-orange mt-5 w-full py-2">
+        <button type="button" onClick={onClose} className="btn btn-primary mt-6 w-full py-3">
           대기실로
         </button>
       </motion.div>

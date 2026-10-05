@@ -65,7 +65,7 @@ export function GameScreen() {
   }, [pending, activeAt])
 
   if (!game) {
-    return <div className="flex h-full items-center justify-center text-sc-yellow">게임 불러오는 중...</div>
+    return <div className="flex h-full items-center justify-center text-muted">게임 불러오는 중...</div>
   }
 
   const me = game.players.find((p) => p.playerId === game.viewerId)
@@ -126,35 +126,35 @@ export function GameScreen() {
     !shielded(playerId) &&
     (targeting.card.targeting === 'CHOSEN_ANY' || playerId !== game.viewerId)
 
+  const seatProps = { baseHp: game.settings.startingHp, defaultHandLimit: game.settings.handSize, cardName, nickOf }
+  const turnText = game.status === 'FINISHED' ? '게임 종료' : myTurn ? '내 차례' : `${current?.nickname ?? '?'}의 차례`
+
   return (
-    <div className="flex h-full flex-col">
-      <header className="flex items-center justify-between gap-4 border-b-2 border-rim-steel bg-gradient-to-b from-[#2a2f3a] to-[#14171d] px-4 py-2 text-sm shadow-[inset_0_-1px_#000]">
-        <div className="flex items-center gap-3">
-          <span className="font-bold text-sc-yellow text-outline">턴 {game.turnNumber}</span>
-          <span className="text-slate-300">방향 {game.direction > 0 ? '→' : '←'}</span>
-          <span className={myTurn ? 'font-bold text-sc-yellow text-outline' : 'text-slate-200'}>
-            {game.status === 'FINISHED' ? '게임 종료' : myTurn ? '▶ 내 차례!' : `${current?.nickname ?? '?'}의 차례`}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          {demo && <span className="border border-rim-purple bg-purple-950 px-2 py-0.5 text-xs">미리보기 모드</span>}
-          {!demo && <span className={connected ? 'text-sc-green' : 'text-rose-400'}>{connected ? '● 연결됨' : '● 재연결 중'}</span>}
-          <button
-            type="button"
-            onClick={() => {
-              sfx.setMuted(!muted)
-              setMuted(!muted)
-            }}
-            className="btn px-2 py-0.5"
-            title="효과음 켜기/끄기"
-          >
-            {muted ? '🔇' : '🔊'}
-          </button>
-          <BgmToggle />
-        </div>
+    <div className="flex min-h-full flex-col lg:h-full">
+      <header className="flex flex-wrap items-center gap-x-4 gap-y-1 px-4 pt-3 text-sm lg:px-5">
+        <b className="text-base font-extrabold tracking-tight">카드 배틀</b>
+        <span className="text-muted">
+          턴 {game.turnNumber} · 방향 {game.direction > 0 ? '→' : '←'}
+        </span>
+        <span className="flex-1" />
+        <span className={`chip ${myTurn ? 'chip-accent font-bold' : ''}`}>{turnText}</span>
+        {demo && <span className="chip chip-curse">미리보기</span>}
+        {!demo && !connected && <span className="chip chip-danger">재연결 중</span>}
+        <button
+          type="button"
+          onClick={() => {
+            sfx.setMuted(!muted)
+            setMuted(!muted)
+          }}
+          className={`btn btn-sm ${muted ? 'text-muted' : ''}`}
+          title="효과음 켜기/끄기"
+        >
+          {muted ? '효과음 꺼짐' : '효과음 켜짐'}
+        </button>
+        <BgmToggle />
       </header>
 
-      <div className="px-4 pt-2">
+      <div className="px-4 pt-2 lg:px-5">
         <TurnTimer
           deadline={game.turnDeadlineEpochMs}
           totalSeconds={game.settings.turnTimeSeconds}
@@ -163,94 +163,98 @@ export function GameScreen() {
         />
       </div>
 
-      <main className="grid flex-1 gap-4 overflow-hidden p-4 lg:grid-cols-[1fr_260px]">
-        <section className="flex flex-col items-center gap-6 overflow-y-auto">
-          <div className="flex flex-wrap justify-center gap-3">
-            {others.map((p) => (
-              <div key={p.playerId} className="flex flex-col items-center gap-1">
-                <Seat
-                  player={p}
-                  baseHp={game.settings.startingHp}
-                  isCurrent={p.playerId === game.currentPlayerId}
-                  isMe={false}
-                  floaters={floaters.filter((f) => f.playerId === p.playerId)}
-                  shake={shakes[p.playerId] ?? 0}
-                  targetable={canTarget(p.playerId, p.eliminated)}
-                  onClick={() => onSeatClick(p.playerId)}
-                  defaultHandLimit={game.settings.handSize}
-                  cardName={cardName}
-                  nickOf={nickOf}
-                />
-                {isHost && p.away && !p.eliminated && game.status === 'IN_PROGRESS' && (
-                  <ConfirmButton
-                    label="강퇴"
-                    confirmLabel="정말 강퇴?"
-                    onConfirm={() => kickPlayer(p.playerId)}
-                    className="btn btn-red px-2 py-0.5 text-xs"
-                    title="강퇴하면 탈락 처리되고 방에서도 나가게 됩니다"
-                  />
-                )}
-              </div>
-            ))}
-          </div>
-
-          <CenterBoard game={game} />
-
-          <div className="flex flex-wrap items-center justify-center gap-3">
-            {me && (
+      <main className="grid flex-1 gap-3 p-3 lg:min-h-0 lg:grid-cols-[250px_1fr_270px] lg:gap-4 lg:p-5 lg:pb-3">
+        {/* 다른 플레이어: 넓은 화면은 왼쪽 세로 목록, 좁은 화면은 가로로 넘기는 줄 */}
+        <aside className="panel flex gap-1 overflow-x-auto p-2 lg:flex-col lg:overflow-x-visible lg:overflow-y-auto lg:p-3">
+          <div className="label hidden px-2 pt-1 pb-2 lg:block">플레이어</div>
+          {others.map((p) => (
+            <div key={p.playerId} className="flex shrink-0 flex-col items-stretch gap-1">
               <Seat
-                player={me}
-                baseHp={game.settings.startingHp}
-                isCurrent={myTurn}
-                isMe
-                floaters={floaters.filter((f) => f.playerId === me.playerId)}
-                shake={shakes[me.playerId] ?? 0}
-                targetable={canTarget(me.playerId, me.eliminated)}
-                onClick={() => onSeatClick(me.playerId)}
-                defaultHandLimit={game.settings.handSize}
-                cardName={cardName}
-                nickOf={nickOf}
+                player={p}
+                isCurrent={p.playerId === game.currentPlayerId}
+                isMe={false}
+                floaters={floaters.filter((f) => f.playerId === p.playerId)}
+                shake={shakes[p.playerId] ?? 0}
+                targetable={canTarget(p.playerId, p.eliminated)}
+                onClick={() => onSeatClick(p.playerId)}
+                {...seatProps}
               />
-            )}
-            {myTurn && !targeting && !extra?.discardOnly && (
-              <button
-                type="button"
-                onClick={() => setDiscardMode(!discardMode)}
-                className={`btn px-4 py-2 text-sm ${discardMode ? 'btn-red' : 'btn-orange'}`}
-              >
-                {discardMode ? '버리기 취소' : extra ? '한 장 버리고 끝내기' : '카드 버리기'}
-              </button>
-            )}
-            {targeting && (
-              <div className="frame frame-red flex items-center gap-2 px-3 py-2 text-sm">
-                <span className="text-rose-100">[{targeting.card.name}] 대상을 고르세요</span>
-                <button type="button" onClick={() => setTargeting(null)} className="btn px-2 py-0.5">
-                  취소
-                </button>
-              </div>
-            )}
-          </div>
+              {isHost && p.away && !p.eliminated && game.status === 'IN_PROGRESS' && (
+                <ConfirmButton
+                  label="강퇴"
+                  confirmLabel="정말 강퇴?"
+                  onConfirm={() => kickPlayer(p.playerId)}
+                  className="btn btn-danger btn-sm mx-2 mb-1"
+                  title="강퇴하면 탈락 처리되고 방에서도 나가게 됩니다"
+                />
+              )}
+            </div>
+          ))}
+        </aside>
 
+        <section className="flex flex-col items-center justify-center gap-3 py-2">
+          <CenterBoard game={game} />
+        </section>
+
+        <aside className="hidden lg:block lg:min-h-0">
+          <GameLog />
+        </aside>
+      </main>
+
+      {/* 내 자리와 손패 */}
+      <footer className="flex flex-col gap-2 px-3 pb-4 lg:px-5 lg:pb-5">
+        <div className="flex min-h-7 flex-wrap items-center justify-center gap-2 text-center text-sm">
+          {targeting && (
+            <>
+              <span className="chip chip-danger">[{targeting.card.name}] 대상을 고르세요</span>
+              <button type="button" onClick={() => setTargeting(null)} className="btn btn-sm">
+                취소
+              </button>
+            </>
+          )}
           {extra && (
-            <div className="frame frame-gold px-4 py-2 text-sm text-amber-100">
-              ➕{' '}
+            <span className="chip chip-warn">
               {extra.discardOnly
                 ? '낼 수 있는 카드가 없어 한 장을 버려야 합니다'
                 : `${EXTRA_MODE_TEXT[extra.mode]}${extra.filter ? ` · ${describeFilter(extra.filter)}만` : ''}`}
-            </div>
+            </span>
           )}
           {myTurn && waiting && (
-            <div className="text-sm text-sc-yellow text-outline">
+            <span className="text-muted">
               {pending ? '골라 둔 카드를 차례가 넘어오는 대로 냅니다 (다시 누르면 취소)' : '차례가 넘어오는 중 — 카드를 골라 두면 곧바로 냅니다'}
-            </div>
+            </span>
           )}
           {discarding && (
-            <div className="text-sm text-rose-300 text-outline">
+            <span className="text-danger">
               {extra ? '버릴 카드를 누르세요. 지금까지 낸 카드로 판정합니다.' : '버릴 카드를 누르세요. 누적 데미지가 있으면 받습니다.'}
-            </div>
+            </span>
           )}
+        </div>
 
-          <div className="flex min-h-48 flex-wrap justify-center gap-2 pb-4">
+        <div className="flex flex-col items-center gap-3 lg:flex-row lg:items-end">
+          <div className="flex w-full items-center gap-2 lg:w-[250px] lg:shrink-0 lg:flex-col lg:items-stretch">
+            {me && (
+              <div className="panel flex-1 p-2">
+                <Seat
+                  player={me}
+                  isCurrent={myTurn}
+                  isMe
+                  floaters={floaters.filter((f) => f.playerId === me.playerId)}
+                  shake={shakes[me.playerId] ?? 0}
+                  targetable={canTarget(me.playerId, me.eliminated)}
+                  onClick={() => onSeatClick(me.playerId)}
+                  {...seatProps}
+                />
+              </div>
+            )}
+            {myTurn && !targeting && !extra?.discardOnly && (
+              <button type="button" onClick={() => setDiscardMode(!discardMode)} className={`btn shrink-0 ${discardMode ? 'btn-danger' : ''}`}>
+                {discardMode ? '버리기 취소' : extra ? '한 장 버리고 끝내기' : '카드 버리기'}
+              </button>
+            )}
+          </div>
+
+          <div className="flex min-h-40 flex-1 flex-wrap items-end justify-center gap-2 sm:gap-3">
             <AnimatePresence>
               {game.myHand.map((instance) => {
                 const card = game.cards[instance.cardId]
@@ -259,37 +263,40 @@ export function GameScreen() {
                 const playable = myTurn && (discarding || playability?.playable === true)
                 const blocked = myTurn && !discarding && playability && !playability.playable
                 const isPending = pending?.instanceId === instance.instanceId
+                const ring = isPending
+                  ? 'shadow-[0_0_0_2px_var(--color-accent),0_18px_40px_-12px_color-mix(in_srgb,var(--color-accent)_45%,transparent)]'
+                  : discarding
+                    ? 'shadow-[0_0_0_2px_var(--color-danger)]'
+                    : ''
                 return (
                   <motion.button
                     type="button"
                     key={instance.instanceId}
                     layoutId={instance.instanceId}
                     initial={{ opacity: 0, y: 40 }}
-                    animate={{ opacity: 1, y: isPending ? -12 : 0 }}
+                    animate={{ opacity: 1, y: isPending ? -14 : 0 }}
                     exit={{ opacity: 0, y: 60, transition: { duration: 0.2 } }}
                     whileHover={playable ? { y: -14 } : undefined}
-                    whileTap={playable ? { scale: 0.95 } : undefined}
+                    whileTap={playable ? { scale: 0.96 } : undefined}
                     onClick={() => onCardClick(instance)}
                     disabled={!playable}
-                    className={`relative ${playable ? 'cursor-pointer' : 'cursor-not-allowed'} ${myTurn ? '' : 'opacity-70'} ${
-                      blocked ? 'opacity-45 grayscale' : ''
-                    } ${discarding ? 'shadow-[0_0_0_3px_#ff5a5a,0_0_16px_#ff2a2a] rounded-lg' : ''} ${
-                      isPending ? 'rounded-lg shadow-[0_0_0_3px_#ffd84a,0_0_18px_#ffb400]' : ''
-                    }`}
+                    className={`relative rounded-2xl ${playable ? 'cursor-pointer hover:shadow-[0_0_0_2px_var(--color-accent)]' : 'cursor-not-allowed'} ${
+                      myTurn ? '' : 'opacity-60'
+                    } ${blocked ? 'opacity-40' : ''} ${ring}`}
                   >
                     <CardFace card={card} />
                     {isPending && (
-                      <span className="absolute inset-x-1 bottom-1 border border-rim-gold bg-black/90 px-1 py-0.5 text-center text-[11px] text-sc-yellow">
+                      <span className="chip chip-accent absolute inset-x-1.5 bottom-1.5 justify-center font-bold">
                         {pending.kind === 'discard' ? '곧 버림' : '곧 냄'}
                       </span>
                     )}
                     {myTurn && !discarding && !isPending && playability?.playable && playability.forcedTargetId && (
-                      <span className="absolute inset-x-1 bottom-1 border border-rim-purple bg-black/90 px-1 py-0.5 text-center text-[11px] text-purple-200">
+                      <span className="chip chip-curse absolute inset-x-1.5 bottom-1.5 justify-center">
                         대상: {playability.forcedTargetId === game.viewerId ? '나' : nickOf(playability.forcedTargetId)}
                       </span>
                     )}
                     {blocked && playability?.reason && (
-                      <span className="absolute inset-x-1 bottom-1 border border-rose-500 bg-black/90 px-1 py-0.5 text-center text-[11px] text-rose-300">
+                      <span className="chip chip-danger absolute inset-x-1.5 bottom-1.5 justify-center">
                         {REASON_TEXT[playability.reason] ?? playability.message}
                       </span>
                     )}
@@ -298,12 +305,8 @@ export function GameScreen() {
               })}
             </AnimatePresence>
           </div>
-        </section>
-
-        <aside className="hidden lg:block">
-          <GameLog />
-        </aside>
-      </main>
+        </div>
+      </footer>
 
       <TurnBanner banner={banner} viewerId={game.viewerId} nickOf={nickOf} />
 

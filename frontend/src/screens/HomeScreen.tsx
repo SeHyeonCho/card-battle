@@ -70,30 +70,30 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
 
   const nicknameOk = nickname.trim().length >= 2 && nickname.trim().length <= 12
   const input = 'field-input'
-  const primary = 'btn btn-orange w-full py-2'
+  const primary = 'btn btn-primary w-full py-3'
 
   return (
-    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-6 px-6 pt-14 pb-6">
-      <div className="text-center">
-        <h1 className="neon-gold text-5xl font-bold">카드 배틀</h1>
-        <p className="mt-3 text-sc-green">누적 데미지를 상대에게 떠넘겨라</p>
+    <div className="mx-auto flex min-h-full max-w-md flex-col justify-center gap-4 px-5 pt-16 pb-8">
+      <div className="mb-4">
+        <h1 className="text-5xl font-extrabold tracking-tight">카드 배틀</h1>
+        <p className="mt-2 text-muted">누적 데미지를 상대에게 떠넘겨라</p>
       </div>
 
       <section className="space-y-2">
-        <label className="text-sm text-sc-yellow">닉네임 (2~12자)</label>
+        <label className="label">닉네임 (2~12자)</label>
         <input className={input} value={nickname} maxLength={12} onChange={(e) => setNickname(e.target.value)} placeholder="닉네임" />
       </section>
 
-      <section className="frame frame-blue space-y-3 p-4">
-        <h2 className="font-bold text-sky-200">초대 코드로 참가</h2>
-        <input className={`${input} tracking-[0.3em] uppercase`} value={invite} maxLength={6} onChange={(e) => setInvite(e.target.value)} placeholder="ABC234" />
+      <section className="panel space-y-3 p-5">
+        <h2 className="font-bold">초대 코드로 참가</h2>
+        <input className={`${input} font-semibold tracking-[0.3em] uppercase`} value={invite} maxLength={6} onChange={(e) => setInvite(e.target.value)} placeholder="ABC234" />
         <button type="button" className={primary} disabled={busy || !nicknameOk || invite.trim().length !== 6} onClick={join}>
           참가하기
         </button>
       </section>
 
-      <section className="frame frame-orange space-y-3 p-4">
-        <h2 className="font-bold text-orange-200">방 만들기 (방장)</h2>
+      <section className="panel space-y-3 p-5">
+        <h2 className="font-bold">방 만들기</h2>
         {accessCodeRequired && (
           <input
             className={input}
@@ -104,7 +104,7 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
             autoComplete="off"
           />
         )}
-        <div className="grid grid-cols-3 gap-2 text-sm text-sc-yellow [&_label]:space-y-1 [&_select]:mt-1">
+        <div className="grid grid-cols-3 gap-2 text-xs font-semibold text-muted [&_select]:mt-1.5">
           <label>
             최대 인원
             <select className={input} value={maxPlayers} onChange={(e) => setMaxPlayers(Number(e.target.value))}>
@@ -136,22 +136,22 @@ export function HomeScreen({ initialInvite }: { initialInvite: string }) {
             </select>
           </label>
         </div>
-        <button type="button" className={primary} disabled={busy || !nicknameOk || (accessCodeRequired && !accessCode.trim())} onClick={create}>
+        <button type="button" className="btn w-full py-3" disabled={busy || !nicknameOk || (accessCodeRequired && !accessCode.trim())} onClick={create}>
           방 만들기
         </button>
       </section>
 
-      <a href="/?demo" className="text-center text-sm text-slate-500 underline hover:text-sc-yellow">
+      <a href="/?demo" className="mt-2 text-center text-sm text-muted underline hover:text-ink">
         서버 없이 게임 화면 미리보기
       </a>
 
-      <p className="text-center text-[11px] leading-relaxed text-slate-500">
+      <p className="text-center text-[11px] leading-relaxed text-muted/70">
         BGM: "Fluffing a Duck" Kevin MacLeod (
-        <a href="https://incompetech.com" target="_blank" rel="noreferrer" className="underline hover:text-sc-yellow">
+        <a href="https://incompetech.com" target="_blank" rel="noreferrer" className="underline hover:text-ink">
           incompetech.com
         </a>
         ) ·{' '}
-        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline hover:text-sc-yellow">
+        <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noreferrer" className="underline hover:text-ink">
           CC BY 4.0
         </a>
       </p>

@@ -76,7 +76,7 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   새 곡을 넣으면 README 출처 목록도 고친다. 후보 검토 페이지는 로컬 `packs/original/assets/review/bgm.html`
   (Kevin MacLeod 12곡·`tools/gen_bgm.py` 칩튠 3곡·원작 2곡)
 - 같은 방식으로 `assets/images/cards/manifest.json`(카드 ID → png/webp, 96×128)이 있으면 `/api/packs/{code}/images` 로 제공하고,
-  화면은 카드를 그림으로 그린다 (마우스를 올리면 전체 효과 설명). 없으면 글자 카드. 원작 그림 파일은 로컬 전용.
+  화면은 카드에 그 그림을 넣는다 (손패는 그림에 마우스를 올리면 효과 설명). 없으면 이름 첫 글자. 원작 그림 파일은 로컬 전용.
 
 ## 작업 방식 (사용자와 합의한 것)
 
@@ -113,9 +113,12 @@ python3 tools/gen_sfx.py                              # 효과음 다시 만들�
   원작 팩 145장이 import되고, `server` 테스트가 원작 팩으로 무작위 400판을 돌린다 (packs/original이 없으면 건너뜀).
 - 서버: `./gradlew build` 통과, `bootRun` 으로 기동 확인 (Flyway 마이그레이션, 카드팩 import 로그 정상).
   원작 팩이 있으면 카드별 효과음 59개와 카드 그림 145장을 등록해 `/api/packs/{code}/sounds`, `/images` 로 제공한다.
-- 화면 테마: 스타크래프트 유즈맵 감성 (원작 카드 그림과 맞춤). 도트 글꼴 갈무리(`galmuri`, SIL OFL), 우주 배경,
-  카드 테두리 같은 금속 틀. 공통 스타일은 `frontend/src/index.css` 의 `frame`/`frame-{orange,blue,green,purple,gold,red}`,
-  `btn`/`btn-{orange,green,red}`, `field-input`, `neon-{blue,red,gold}` 를 쓴다 (새 화면도 이것으로 맞춘다).
+- 화면 테마: 플랫한 다크 모드 (테두리 대신 면 색 차이로 칸을 나누고 포인트 색은 형광 연두 하나). 글꼴 Pretendard(`pretendard`, SIL OFL).
+  색은 `frontend/src/index.css` 의 `@theme` 토큰(`bg`·`surface`·`raised`·`line`·`ink`·`muted`·`accent`·`danger`·`ok`·`warn`·`cat-*`)을
+  Tailwind 클래스(`bg-surface`, `text-muted` …)로 쓰고, 공통 모양은 `panel`, `btn`/`btn-{primary,danger,sm}`, `field-input`,
+  `chip`/`chip-{accent,danger,curse,warn}`, `label`, `num` 을 쓴다 (새 화면도 이것으로 맞춘다. 한 화면에 `btn-primary` 는 하나).
+  카드(`CardFace`)는 팩 그림의 가운데 그림 칸만 잘라 쓰고 이름·공격력·설명은 직접 그린다. 게임 화면은 넓으면
+  [플레이어 | 보드 | 로그] + 아래 손패, 좁으면 세로로 쌓인다.
 - 프론트: 빌드·린트 통과. 실제 서버와 연결해 2인 한 판(방 만들기 → 참가 → 준비 → 시작 → 탈락 → 대기실 복귀) 확인.
   Phase 2 화면(저주·지속 상태·필드 락·시한폭탄·카운트다운·공개 손패·추가 제출 안내)을 원작 팩 실제 플레이로 확인.
 - 한 브라우저에서 여러 명을 테스트할 때는 세션이 localStorage(origin 단위)에 있으므로 포트를 달리 띄운다

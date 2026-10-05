@@ -11,14 +11,19 @@ export function GameLog() {
   }, [log.length])
 
   return (
-    <div className="frame flex h-full flex-col bg-black/80">
-      <div className="border-b border-rim-steel px-3 py-2 text-xs text-sc-yellow">[게임 로그]</div>
-      <div className="flex-1 space-y-1 overflow-y-auto px-3 py-2 text-[13px] leading-relaxed">
-        {log.map((entry, i) => (
-          <div key={entry.id} className={i === log.length - 1 ? 'text-white' : 'text-slate-400'}>
-            {entry.text}
-          </div>
-        ))}
+    <div className="panel flex h-full flex-col p-4">
+      <div className="label mb-2">게임 로그</div>
+      <div className="flex-1 overflow-y-auto text-[13px] leading-snug">
+        {log.map((entry, i) => {
+          // 문구로 종류를 가려 점 색만 바꾼다 (피해·탈락은 빨강, 회복은 초록)
+          const tone = /받음|탈락|피해/.test(entry.text) ? 'bg-danger' : /회복|승리/.test(entry.text) ? 'bg-ok' : 'bg-line'
+          return (
+            <div key={entry.id} className={`flex gap-2 border-b border-raised py-1.5 ${i === log.length - 1 ? 'text-ink' : 'text-muted'}`}>
+              <i className={`mt-1.5 size-1.5 shrink-0 rounded-full ${tone}`} />
+              <span>{entry.text}</span>
+            </div>
+          )
+        })}
         <div ref={bottom} />
       </div>
     </div>

@@ -1,33 +1,32 @@
 @import "tailwindcss";
 
 /*
- * 화면 테마: 스타크래프트 유즈맵 감성 (원작 카드 그림과 맞춘 레트로 스타일).
- * 글꼴은 갈무리(Galmuri, SIL OFL 1.1) — 카드 그림 속 도트 글씨와 비슷하다.
+ * 화면 테마: 플랫한 다크 모드. 테두리 대신 면 색 차이로 칸을 나누고, 포인트 색은 형광 연두 하나만 쓴다.
+ * 글꼴은 Pretendard (SIL OFL 1.1, main.tsx 에서 불러온다).
  */
-@font-face {
-  font-family: Galmuri11;
-  font-weight: 400;
-  font-display: swap;
-  src: url("../node_modules/galmuri/dist/Galmuri11.woff2") format("woff2");
-}
-@font-face {
-  font-family: Galmuri11;
-  font-weight: 700;
-  font-display: swap;
-  src: url("../node_modules/galmuri/dist/Galmuri11-Bold.woff2") format("woff2");
-}
-
 @theme {
-  --font-sans: "Galmuri11", "Apple SD Gothic Neo", "Malgun Gothic", monospace;
-  /* 카드 종류와 같은 테두리 색 */
-  --color-rim-orange: #f08a2c;
-  --color-rim-blue: #6aa7e8;
-  --color-rim-green: #43c24a;
-  --color-rim-purple: #b27ae0;
-  --color-rim-steel: #5b6474;
-  --color-rim-gold: #ffd84a;
-  --color-sc-yellow: #ffd84a;
-  --color-sc-green: #57e36a;
+  --font-sans: "Pretendard Variable", Pretendard, -apple-system, "Apple SD Gothic Neo", "Malgun Gothic", sans-serif;
+
+  /* 면: 바탕 → 칸 → 칸 위의 요소 */
+  --color-bg: #0d0f13;
+  --color-surface: #14171d;
+  --color-raised: #1c2029;
+  --color-line: #262b36;
+  /* 글자 */
+  --color-ink: #f3f5f8;
+  --color-muted: #8c93a1;
+  /* 포인트·상태 */
+  --color-accent: #c8ff3e;
+  --color-on-accent: #10130a;
+  --color-danger: #ff5a5f;
+  --color-ok: #22c79a;
+  --color-warn: #ffb020;
+  /* 카드 종류 */
+  --color-cat-attack: #ff5a5f;
+  --color-cat-support: #4c8dff;
+  --color-cat-benefit: #22c79a;
+  --color-cat-curse: #a47bff;
+  --color-cat-misc: #8b93a3;
 }
 
 html,
@@ -37,131 +36,87 @@ body,
 }
 
 body {
-  @apply text-slate-100;
-  /* 우주 배경: 별 몇 개 + 가운데가 밝은 남색 */
-  background-color: #05070d;
-  background-image:
-    radial-gradient(1px 1px at 12% 20%, #ffffff90, transparent),
-    radial-gradient(1px 1px at 70% 30%, #ffffff70, transparent),
-    radial-gradient(1.5px 1.5px at 40% 80%, #ffffff80, transparent),
-    radial-gradient(1px 1px at 85% 70%, #ffffff60, transparent),
-    radial-gradient(1px 1px at 25% 60%, #ffffff50, transparent),
-    radial-gradient(1.5px 1.5px at 92% 12%, #ffffff70, transparent),
-    radial-gradient(ellipse at 50% 35%, #1b2a44 0%, #05070d 75%);
-  background-attachment: fixed;
+  background: var(--color-bg);
+  color: var(--color-ink);
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.01em;
 }
 
 @layer components {
-  /* 금속 틀: 카드 테두리처럼 바깥 어두운 선 + 안쪽 밝은 선 + 은은한 빛 */
-  .frame {
-    --rim: var(--color-rim-steel);
-    --rim-dark: #1a1e26;
-    --rim-light: #9aa3b3;
-    --glow: #00000000;
-    border: 3px solid var(--rim);
-    box-shadow:
-      0 0 0 2px var(--rim-dark),
-      inset 0 0 0 2px var(--rim-light),
-      0 0 18px var(--glow);
-    background: #0b0e14e6;
-  }
-  .frame-orange {
-    --rim: var(--color-rim-orange);
-    --rim-dark: #5a1200;
-    --rim-light: #ffb466;
-    --glow: #ff6a0055;
-    background: #1b0a06e6;
-  }
-  .frame-blue {
-    --rim: var(--color-rim-blue);
-    --rim-dark: #0b2a55;
-    --rim-light: #a8d0ff;
-    --glow: #3a8cff44;
-    background: #06101fe6;
-  }
-  .frame-green {
-    --rim: var(--color-rim-green);
-    --rim-dark: #0b3a10;
-    --rim-light: #a6f0a0;
-    --glow: #3cff4a33;
-    background: #06140ae6;
-  }
-  .frame-purple {
-    --rim: var(--color-rim-purple);
-    --rim-dark: #2c0b4a;
-    --rim-light: #dcb8ff;
-    --glow: #b04aff44;
-    background: #120820e6;
-  }
-  .frame-gold {
-    --rim: var(--color-rim-gold);
-    --rim-dark: #4a3500;
-    --rim-light: #fff0a8;
-    --glow: #ffd84a88;
-  }
-  .frame-red {
-    --rim: #ff5a5a;
-    --rim-dark: #4a0000;
-    --rim-light: #ffb0b0;
-    --glow: #ff2a2a88;
+  /* 칸: 테두리 없이 면 색으로만 구분 */
+  .panel {
+    background: var(--color-surface);
+    border-radius: 18px;
   }
 
-  /* 버튼: 금속 틀 + 위에서 아래로 어두워지는 판 */
+  /* 버튼. 클릭음은 button.btn 에 붙으므로 모든 버튼에 btn 을 쓴다 */
   .btn {
-    @apply cursor-pointer px-3 py-1.5 font-bold text-white transition select-none disabled:cursor-not-allowed disabled:opacity-40;
-    border: 2px solid var(--color-rim-steel);
-    background: linear-gradient(#3a414f, #1a1e26);
-    box-shadow: inset 0 0 0 1px #9aa3b3;
-    text-shadow: 1px 1px #000;
+    @apply cursor-pointer rounded-xl px-4 py-2.5 text-sm font-semibold transition select-none disabled:cursor-not-allowed disabled:opacity-35;
+    background: var(--color-raised);
+    color: var(--color-ink);
   }
   .btn:not(:disabled):hover {
-    filter: brightness(1.25);
+    filter: brightness(1.18);
   }
   .btn:not(:disabled):active {
-    transform: translateY(1px);
+    transform: scale(0.97);
   }
-  .btn-orange {
-    border-color: var(--color-rim-orange);
-    background: linear-gradient(#7a2a0c, #2a0802);
-    box-shadow: inset 0 0 0 1px #ffb466, 0 0 10px #ff6a0040;
+  .btn-primary {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
   }
-  .btn-green {
-    border-color: var(--color-rim-green);
-    background: linear-gradient(#1f6a24, #062a0a);
-    box-shadow: inset 0 0 0 1px #a6f0a0, 0 0 10px #3cff4a30;
+  .btn-danger {
+    background: color-mix(in srgb, var(--color-danger) 18%, var(--color-surface));
+    color: var(--color-danger);
   }
-  .btn-red {
-    border-color: #ff5a5a;
-    background: linear-gradient(#8a1616, #2a0404);
-    box-shadow: inset 0 0 0 1px #ffb0b0, 0 0 10px #ff2a2a40;
+  .btn-sm {
+    @apply rounded-lg px-2.5 py-1 text-xs;
   }
 
-  /* 입력칸: 검은 화면에 금속 테두리 */
+  /* 입력칸 */
   .field-input {
-    @apply w-full px-3 py-2 text-slate-100 outline-none placeholder:text-slate-600;
-    background: #000;
-    border: 2px solid var(--color-rim-steel);
-    box-shadow: inset 0 0 0 1px #000, inset 2px 2px 0 #00000080;
+    @apply w-full rounded-xl px-3.5 py-2.5 text-sm outline-none transition placeholder:text-muted/60;
+    background: var(--color-raised);
+    color: var(--color-ink);
+    box-shadow: inset 0 0 0 1.5px transparent;
   }
   .field-input:focus {
-    border-color: var(--color-rim-gold);
+    box-shadow: inset 0 0 0 1.5px var(--color-accent);
   }
 
-  /* 네온 숫자 (현재 공격력·누적 데미지) */
-  .neon-blue {
-    color: #7fd3ff;
-    text-shadow: 3px 3px #000, 0 0 12px #3aa0ff;
+  /* 작은 알약 표시 (상태·저주·안내) */
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+    background: var(--color-raised);
+    color: var(--color-ink);
   }
-  .neon-red {
-    color: #ff5a5a;
-    text-shadow: 3px 3px #000, 0 0 14px #ff2a2a;
+  .chip-danger {
+    background: color-mix(in srgb, var(--color-danger) 16%, var(--color-surface));
+    color: var(--color-danger);
   }
-  .neon-gold {
-    color: var(--color-sc-yellow);
-    text-shadow: 3px 3px #000, 0 0 14px #ffb400;
+  .chip-accent {
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .chip-curse {
+    background: color-mix(in srgb, var(--color-cat-curse) 18%, var(--color-surface));
+    color: var(--color-cat-curse);
+  }
+  .chip-warn {
+    background: color-mix(in srgb, var(--color-warn) 16%, var(--color-surface));
+    color: var(--color-warn);
   }
 
-  .text-outline {
-    text-shadow: 1px 1px #000, -1px 1px #000, 1px -1px #000, -1px -1px #000;
+  /* 칸 제목 */
+  .label {
+    @apply text-xs font-semibold text-muted;
+  }
+
+  /* 큰 숫자 */
+  .num {
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1;
   }
 }

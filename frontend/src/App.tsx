@@ -87,7 +87,7 @@ export default function App() {
   }, [session, booted])
 
   if (!booted) {
-    return <div className="flex h-full items-center justify-center text-sc-yellow">불러오는 중...</div>
+    return <div className="flex h-full items-center justify-center text-muted">불러오는 중...</div>
   }
 
   return (

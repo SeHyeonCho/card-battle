@@ -10,14 +10,14 @@ export function BgmToggle({ floating = false }: { floating?: boolean }) {
   return (
     <button
       type="button"
-      className={`btn px-2 py-0.5 text-xs ${floating ? 'fixed top-3 right-3 z-30 py-1' : ''}`}
+      className={`btn btn-sm ${on ? '' : 'text-muted'} ${floating ? 'fixed top-4 right-4 z-30' : ''}`}
       title="배경음악 켜기/끄기"
       onClick={() => {
         bgm.setEnabled(!on)
         setOn(!on)
       }}
     >
-      {on ? '♪ BGM 켜짐' : '♪ BGM 꺼짐'}
+      {on ? '♪ 음악 켜짐' : '♪ 음악 꺼짐'}
     </button>
   )
 }

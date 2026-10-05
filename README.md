@@ -130,4 +130,4 @@ PRIVATE 팩은 서버 접근 코드를 아는 사람만 선택할 수 있다. �
 - 배경음악 (첫 화면·대기실·게임): "Fluffing a Duck" Kevin MacLeod ([incompetech.com](https://incompetech.com))
   Licensed under [Creative Commons: By Attribution 4.0](https://creativecommons.org/licenses/by/4.0/) — `frontend/public/bgm/lobby.mp3`
 - 효과음: `tools/gen_sfx.py` 로 직접 합성 (외부 음원 없음)
-- 글꼴: [갈무리(Galmuri)](https://github.com/quiple/galmuri), SIL Open Font License 1.1
+- 글꼴: [Pretendard](https://github.com/orioncactus/pretendard), SIL Open Font License 1.1

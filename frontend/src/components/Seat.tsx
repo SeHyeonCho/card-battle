@@ -20,20 +20,19 @@ interface Props {
   nickOf: (playerId: string) => string
 }
 
-/** 플레이어 좌석: 닉네임, 체력 바, 손패 수. 맞으면 흔들리고 숫자가 떠오른다 */
+/**
+ * 플레이어 좌석: 이름 첫 글자 원, 닉네임, 가는 체력 바, 체력·손패 수, 상태 표시.
+ * 맞으면 흔들리고 숫자가 떠오른다. 지금 차례면 연두 테두리, 대상으로 고를 수 있으면 빨간 테두리
+ */
 export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targetable, onClick, defaultHandLimit, cardName, nickOf }: Props) {
   const hp = Math.max(0, player.hp)
   const ratio = Math.min(1, hp / Math.max(1, baseHp))
-  const barColor =
-    hp > baseHp
-      ? 'bg-gradient-to-b from-sky-300 to-sky-600'
-      : ratio > 0.5
-        ? 'bg-gradient-to-b from-[#7dff6a] to-[#1f9c24]'
-        : ratio > 0.25
-          ? 'bg-gradient-to-b from-amber-300 to-amber-600'
-          : 'bg-gradient-to-b from-[#ff8a6a] to-[#c0241f]'
-  // 틀 색: 대상으로 고를 수 있음(빨강) > 지금 차례(금색) > 나(주황) > 다른 사람(파랑)
-  const frame = targetable ? 'frame-red' : isCurrent ? 'frame-gold' : isMe ? 'frame-orange' : 'frame-blue'
+  const barColor = hp > baseHp ? 'bg-cat-support' : ratio > 0.5 ? 'bg-ok' : ratio > 0.25 ? 'bg-warn' : 'bg-danger'
+  const ring = targetable
+    ? 'bg-raised shadow-[inset_0_0_0_1.5px_var(--color-danger)]'
+    : isCurrent
+      ? 'bg-raised shadow-[inset_0_0_0_1.5px_var(--color-accent)]'
+      : ''
   const [scope, animate] = useAnimate<HTMLButtonElement>()
 
   useEffect(() => {
@@ -51,64 +50,65 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
       type="button"
       disabled={!targetable}
       onClick={onClick}
-      className={`frame ${frame} relative w-44 p-3 text-left text-sm transition ${player.eliminated ? 'opacity-40 grayscale' : offline ? 'opacity-70' : ''} ${
-        targetable ? 'cursor-pointer hover:brightness-125' : 'cursor-default'
-      }`}
+      className={`relative flex w-full min-w-44 items-start gap-3 rounded-2xl p-2.5 text-left transition ${ring} ${
+        player.eliminated ? 'opacity-35 grayscale' : offline ? 'opacity-60' : ''
+      } ${targetable ? 'cursor-pointer hover:brightness-125' : 'cursor-default'}`}
     >
-      <div className="flex items-center justify-between gap-2">
-        <span className="truncate font-bold text-white">
-          {player.eliminated && '💀 '}
-          {offline && <span title="연결 끊김">📡 </span>}
-          {player.away && !player.eliminated && <span title="자리 비움 (연속 시간 초과)">💤 </span>}
-          {player.nickname}
-          {isMe && <span className="ml-1 text-xs text-orange-300">(나)</span>}
+      <span className={`grid size-10 shrink-0 place-items-center rounded-full text-sm font-bold ${isMe ? 'bg-accent text-on-accent' : 'bg-line text-ink'}`}>
+        {player.eliminated ? '💀' : player.nickname.slice(0, 1)}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-center gap-1.5 text-sm font-semibold text-ink">
+          <span className="truncate">{player.nickname}</span>
+          {isMe && <span className="text-[11px] font-semibold text-accent">나</span>}
+          {isCurrent && !player.eliminated && <span className="text-[11px] font-semibold text-accent">차례</span>}
         </span>
-        <span className="shrink-0 text-xs text-slate-300" title="손패 수 / 손패 한도">
-          🂠 {player.handCount}
-          {player.handLimit !== defaultHandLimit && <span className="text-amber-300">/{player.handLimit}</span>}
+        <span className="mt-1.5 block h-1 overflow-hidden rounded-full bg-line">
+          <motion.span className={`block h-full rounded-full ${barColor}`} animate={{ width: `${ratio * 100}%` }} transition={{ duration: 0.4 }} />
         </span>
-      </div>
-      <div className="mt-2 h-2.5 overflow-hidden border border-slate-600 bg-black">
-        <motion.div className={`h-full ${barColor}`} animate={{ width: `${ratio * 100}%` }} transition={{ duration: 0.4 }} />
-      </div>
-      <div className="mt-1 text-right tabular-nums">
-        <span className="text-lg font-bold text-white">{hp}</span>
-        <span className="ml-1 text-xs text-slate-400">/ {baseHp}</span>
-        {player.hpCap < baseHp && <span className="ml-1 text-[10px] text-rose-300">(최대 {player.hpCap})</span>}
-      </div>
+        <span className="mt-1.5 block text-xs text-muted tabular-nums">
+          <b className="font-semibold text-ink">{hp}</b> HP
+          {player.hpCap < baseHp && <span className="text-danger"> (최대 {player.hpCap})</span>}
+          <span title="손패 수 / 손패 한도">
+            {' '}
+            · 손패 {player.handCount}
+            {player.handLimit !== defaultHandLimit && <span className="text-warn">/{player.handLimit}</span>}
+          </span>
+        </span>
 
-      {offline && (
-        <div className="mt-1 border border-rose-500 bg-black/70 px-1.5 py-0.5 text-center text-[11px] text-rose-300" title="좌석은 그대로이고 차례가 오면 턴 시간대로 진행됩니다">
-          📡 연결 끊김
-        </div>
-      )}
+        {(offline || (player.away && !player.eliminated) || player.curse || player.statuses.length > 0) && (
+          <span className="mt-1.5 flex flex-wrap gap-1">
+            {offline && (
+              <span className="chip chip-danger" title="좌석은 그대로이고 차례가 오면 턴 시간대로 진행됩니다">
+                연결 끊김
+              </span>
+            )}
+            {player.away && !player.eliminated && (
+              <span className="chip" title="자리 비움 (연속 시간 초과)">
+                💤 자리 비움
+              </span>
+            )}
+            {player.curse && (
+              <span className="chip chip-curse" title={`저주를 건 사람: ${nickOf(player.curse.casterId)}`}>
+                {cardName(player.curse.cardId)}
+              </span>
+            )}
+            {player.statuses.map((st) => (
+              <span key={st.status} className="chip" title={STATUS_TEXT[st.status]?.label ?? st.status}>
+                {STATUS_TEXT[st.status]?.icon ?? '•'} {st.turnsLeft}
+              </span>
+            ))}
+          </span>
+        )}
 
-      {player.away && !player.eliminated && (
-        <div className="mt-1 border border-slate-500 bg-black/60 px-1.5 py-0.5 text-center text-[11px] text-slate-200">💤 자리 비움</div>
-      )}
+        {!isMe && player.revealedHand && (
+          <span className="mt-1.5 block rounded-lg bg-line px-2 py-1 text-[11px] leading-snug text-warn" title="지켜보고 있다: 손패 공개">
+            👁 {player.revealedHand.map((c) => cardName(c.cardId)).join(', ')}
+          </span>
+        )}
+      </span>
 
-      {(player.curse || player.statuses.length > 0) && (
-        <div className="mt-1 flex flex-wrap gap-1 text-[11px]">
-          {player.curse && (
-            <span className="border border-rim-purple bg-purple-950/90 px-1.5 py-0.5 text-purple-100" title={`저주를 건 사람: ${nickOf(player.curse.casterId)}`}>
-              😈 {cardName(player.curse.cardId)}
-            </span>
-          )}
-          {player.statuses.map((st) => (
-            <span key={st.status} className="border border-rim-blue bg-sky-950/90 px-1.5 py-0.5 text-sky-100" title={STATUS_TEXT[st.status]?.label ?? st.status}>
-              {STATUS_TEXT[st.status]?.icon ?? '•'} {st.turnsLeft}
-            </span>
-          ))}
-        </div>
-      )}
-
-      {!isMe && player.revealedHand && (
-        <div className="mt-1 border border-rim-gold/60 bg-black/60 px-1.5 py-1 text-[11px] leading-tight text-amber-100" title="지켜보고 있다: 손패 공개">
-          👁 {player.revealedHand.map((c) => cardName(c.cardId)).join(', ')}
-        </div>
-      )}
-
-      <div className="pointer-events-none absolute inset-x-0 -top-2 flex justify-center">
+      <span className="pointer-events-none absolute inset-x-0 -top-2 flex justify-center">
         <AnimatePresence>
           {floaters.map((f) => (
             <motion.span
@@ -116,13 +116,13 @@ export function Seat({ player, baseHp, isCurrent, isMe, floaters, shake, targeta
               initial={{ y: 0, opacity: 1, scale: 1.2 }}
               animate={{ y: -44, opacity: 0, scale: 1 }}
               transition={{ duration: 1.1, ease: 'easeOut' }}
-              className={`absolute text-2xl font-bold ${f.delta < 0 ? 'neon-red' : 'text-sc-green text-outline'}`}
+              className={`num absolute text-3xl ${f.delta < 0 ? 'text-danger' : 'text-ok'}`}
             >
               {f.delta > 0 ? `+${f.delta}` : f.delta}
             </motion.span>
           ))}
         </AnimatePresence>
-      </div>
+      </span>
     </button>
   )
 }
